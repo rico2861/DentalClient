@@ -39,13 +39,13 @@ const TOOTH = '<svg viewBox="0 0 24 24" width="30" height="30" fill="#fff"><path
 const authShell = inner => { const h = new Date().getHours(), hello = h < 5 || h >= 18 ? 'Bonsoir' : 'Bonjour'
   return `<div class="auth lg">
   <aside class="lgb"><div class="lgglow"></div>
-    <div class="lgtop"><span class="lglogo">${TOOTH}</span><div><b>DENTAL</b><small>Gestion de clinique dentaire</small></div></div>
+    <div class="lgtop"><span class="lglogo">${TOOTH}</span><div><b>Dental Assist</b><small>Gestion de clinique dentaire</small></div></div>
     <div class="lgmid"><div class="lgart" aria-hidden="true">${TOOTH}</div><h1>Bienvenue</h1><p>Connectez-vous pour accéder à l'espace de travail de la clinique.</p></div>
     <div class="lgfoot"><span>${ic('lock', 13)} Accès réservé au personnel</span></div>
   </aside>
   <main class="lgp"><div class="lgbar"><span class="lgnet ${navigator.onLine ? 'on' : ''}" data-lgnet>${ic('wifi', 13)}<span>${navigator.onLine ? 'En ligne' : 'Hors ligne · mode local'}</span></span><span class="lgclock" data-lgclock>${new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span></div>
-    <div class="lgc"><div class="lgmob"><span class="lglogo sm">${TOOTH}</span><b>DENTAL</b></div><span class="lghello">${hello}</span>${inner}</div>
-    <p class="lgcopy">© ${new Date().getFullYear()} DENTAL · Accès réservé au personnel autorisé</p></main></div>` }
+    <div class="lgc"><div class="lgmob"><span class="lglogo sm">${TOOTH}</span><b>Dental Assist</b></div><span class="lghello">${hello}</span>${inner}</div>
+    <p class="lgcopy">© ${new Date().getFullYear()} Dental Assist · Accès réservé au personnel autorisé</p></main></div>` }
 // horloge et état du réseau sur l'écran de connexion
 setInterval(() => { const c = document.querySelector('[data-lgclock]'); if (c) c.textContent = new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }, 15000)
 for (const ev of ['online', 'offline']) addEventListener(ev, () => { const n = document.querySelector('[data-lgnet]'); if (n) { n.classList.toggle('on', navigator.onLine); n.querySelector('span').textContent = navigator.onLine ? 'En ligne' : 'Hors ligne · mode local' } })
