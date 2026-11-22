@@ -52,6 +52,7 @@ for (const ev of ['online', 'offline']) addEventListener(ev, () => { const n = d
 // majuscules activées : avertissement sous le mot de passe
 document.addEventListener('keyup', e => { const i = e.target; if (!(i instanceof HTMLInputElement) || i.type !== 'password' && !i.closest('.lgpw')) return; const w = i.closest('.af')?.querySelector('[data-caps]'); if (w && e.getModifierState) w.hidden = !e.getModifierState('CapsLock') })
 let pstatus = 'active', me = null, page = 0, search = '', challenge = null, otpInfo = null, lastAct = Date.now(), idleWarned = false
+let authMode = 'staff', ownerChallenge = null, ownerEmail = null   // connexion propriétaire : licence + OTP (instance partagée)
 const can = p => me.perms.includes(p)
 const ROLE_FR = { OWNER: 'Propriétaire', ADMIN: 'Administrateur', ADMIN_MEDICAL: 'Administrateur médical', ADMIN_FINANCIER: 'Administrateur financier', DENTIST: 'Médecin dentiste', DENTAL_ASSISTANT: 'Assistant(e) dentaire', SECRETARY: 'Secrétaire', ACCOUNTANT: 'Comptable', STOCK_MANAGER: 'Gestionnaire de stock', DENTAL_TECH: 'Prothésiste', STAFF: 'Personnel' }
 let usersCache = [], usersFilter = 'active'
@@ -191,7 +192,24 @@ function render() {
     + `<details class="otphelp"><summary>Pas d'Internet ou pas de code ?</summary><ul>${m.app ? '<li><b>Application d\'authentification</b> (Google Authenticator, Authy…) : elle fonctionne sans Internet.</li>' : ''}<li><b>Code de secours</b> : un des codes notés lors de l'activation (usage unique).</li><li><b>Code d'accès de la direction</b> : le propriétaire ou un administrateur peut vous remettre sur place un code à usage unique (valable 30 minutes), depuis la page Utilisateurs.</li></ul></details>`
     + `<button class="alink" data-a="cancelotp">${ic('left', 16)} Retour à la connexion</button>`) }
   if (!me) { let saved = ''; try { saved = localStorage.getItem('dl_email') || '' } catch {}
-    return app.innerHTML = authShell(`<h2>Connexion à votre espace</h2><p class="sub">Identifiez-vous avec les accès fournis par l'administrateur de la clinique.</p>
+    const sb = on => `flex:1;padding:9px;border:0;border-radius:9px;font-weight:600;cursor:pointer;background:${on ? '#fff' : 'transparent'};color:${on ? '#0f2a5c' : '#5b6778'};box-shadow:${on ? '0 1px 3px rgba(0,0,0,.08)' : 'none'}`
+    const toggle = `<div style="display:flex;gap:6px;margin-bottom:16px;background:#eef2f9;padding:4px;border-radius:12px">
+      <button type="button" data-a="mode-staff" style="${sb(authMode === 'staff')}">Personnel</button>
+      <button type="button" data-a="mode-owner" style="${sb(authMode === 'owner')}">Propriétaire</button></div>`
+    // ── Propriétaire (super-admin) : licence + code reçu par e-mail ──
+    if (authMode === 'owner') {
+      if (ownerChallenge) return app.innerHTML = authShell(`${toggle}<h2>Code de connexion</h2>
+        <div class="otpok">${ic('check', 16)} Un code à 6 chiffres a été envoyé à <b>${esc(ownerEmail || 'votre e-mail')}</b>. Il est valable 10 minutes.</div>
+        <form data-f="ownerotp" class="af"><label>Code reçu par e-mail<input name="code" inputmode="numeric" autocomplete="one-time-code" placeholder="123 456" required autofocus></label>
+          <div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">${ic('lock', 16)}<span>Se connecter</span></button></form>
+        <button class="alink" data-a="ownerresend">${ic('mail', 16)} Renvoyer le code</button><button class="alink" data-a="ownerback">${ic('left', 16)} Changer de licence</button>`)
+      return app.innerHTML = authShell(`${toggle}<h2>Connexion propriétaire</h2><p class="sub">Saisissez la licence de votre clinique. Un code de connexion sera envoyé à l'e-mail du compte super-admin.</p>
+        <form data-f="ownerlic" class="af"><label>Clé de licence<span class="lgin">${ic('key', 17)}<input name="license" type="text" autocapitalize="off" spellcheck="false" placeholder="DL1.…" required autofocus></span></label>
+          <div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">${ic('mail', 16)}<span>Recevoir le code</span></button></form>
+        <p class="sub" style="font-size:12.5px;margin-top:14px">Pas encore de compte ? Créez votre super-admin depuis votre espace client sur le site Dental Assist.</p>`)
+    }
+    // ── Personnel : e-mail / mot de passe (+ 2FA) ──
+    return app.innerHTML = authShell(`${toggle}<h2>Connexion à votre espace</h2><p class="sub">Identifiez-vous avec les accès fournis par l'administrateur de la clinique.</p>
     <form data-f="login" class="af lgf"><label>E-mail ou nom d'utilisateur<span class="lgin">${ic('user', 17)}<input name="email" type="text" autocapitalize="off" spellcheck="false" placeholder="vous@clinique.com ou JP620012" required autocomplete="username" value="${esc(saved)}" ${saved ? '' : 'autofocus'}></span></label>
       <label>Mot de passe<span class="lgin pw lgpw">${ic('key', 17)}<input name="password" type="password" placeholder="Votre mot de passe" required autocomplete="current-password" ${saved ? 'autofocus' : ''}><button type="button" class="eye" aria-label="Afficher ou masquer le mot de passe">${ic('eye', 18)}</button></span></label>
       <div class="lgcaps" data-caps hidden>${ic('alert', 14)} Majuscules activées</div>
@@ -341,6 +359,8 @@ const F = e => Object.fromEntries(new FormData(e.target))
 const submit = {
   async login(e) { const fd = F(e); try { if (fd.remember) localStorage.setItem('dl_email', fd.email); else localStorage.removeItem('dl_email') } catch {} delete fd.remember; const r = await api('/login', fd); if (r.need_otp) { challenge = r.challenge; otpInfo = r; render() } else { history.replaceState(null, '', location.pathname + '#tableau-de-bord'); await boot() } },
   async otp(e) { await api('/login/otp', { challenge, code: F(e).code }); challenge = null; history.replaceState(null, '', location.pathname + '#tableau-de-bord'); await boot() },
+  async ownerlic(e) { const r = await api('/login/owner/request', { license: (F(e).license || '').trim() }); ownerChallenge = r.challenge; ownerEmail = r.email; render() },
+  async ownerotp(e) { await api('/login/owner/verify', { challenge: ownerChallenge, code: F(e).code }); ownerChallenge = null; ownerEmail = null; history.replaceState(null, '', location.pathname + '#tableau-de-bord'); await boot() },
   async pw(e) { await api('/change-password', F(e)); toast('Mot de passe modifié'); history.replaceState(null, '', location.pathname + '#tableau-de-bord'); await boot() },
   async search(e) { search = F(e).q; page = 0; render() },
   async patient(e) { const r = await api('/patients', F(e)); toast('Patient créé — n° de dossier ' + r.file_number); search = r.file_number; page = 0; render() },
@@ -402,6 +422,10 @@ document.addEventListener('click', async e => {
     if (await S8.click(b, a, id)) return
     if (a === 'cancelotp') { challenge = null; otpInfo = null; render(); return }
     if (a === 'otpresend') { try { const r = await api('/login/resend', { challenge }); otpInfo = { ...otpInfo, email: r }; render(); toast('Nouveau code envoyé à ' + r.to) } catch (x) { otpInfo = { ...otpInfo, email: { sent: false, reason: x.message } }; render() } return }
+    if (a === 'mode-owner') { authMode = 'owner'; render(); return }
+    if (a === 'mode-staff') { authMode = 'staff'; ownerChallenge = null; ownerEmail = null; render(); return }
+    if (a === 'ownerback') { ownerChallenge = null; ownerEmail = null; render(); return }
+    if (a === 'ownerresend') { try { const r = await api('/login/owner/resend', { challenge: ownerChallenge }); ownerEmail = r.to || ownerEmail; toast('Nouveau code envoyé') } catch (x) { toast(x.message) } return }
     if (a === 'logout') { try { await api('/logout', {}) } catch {} toLogin('Vous êtes déconnecté') }
     else if (a === 'prev') { page--; render() } else if (a === 'next') { page++; render() }
     else if (a === 'user-edit') { const u = usersCache.find(x => x.id === id); if (!u) return
