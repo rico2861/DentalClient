@@ -204,7 +204,7 @@ function render() {
           <div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">${ic('lock', 16)}<span>Se connecter</span></button></form>
         <button class="alink" data-a="ownerresend">${ic('mail', 16)} Renvoyer le code</button><button class="alink" data-a="ownerback">${ic('left', 16)} Changer de licence</button>`)
       return app.innerHTML = authShell(`${toggle}<h2>Connexion propriétaire</h2><p class="sub">Saisissez la licence de votre clinique. Un code de connexion sera envoyé à l'e-mail du compte super-admin.</p>
-        <form data-f="ownerlic" class="af"><label>Clé de licence<span class="lgin">${ic('key', 17)}<input name="license" type="text" autocapitalize="off" spellcheck="false" placeholder="DL1.…" required autofocus></span></label>
+        <form data-f="ownerlic" class="af"><label>Clé de licence<span class="lgin">${ic('key', 17)}<input name="license" type="text" autocapitalize="off" spellcheck="false" placeholder="DNTL-XXXXX-XXXXX-…" required autofocus></span></label>
           <div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">${ic('mail', 16)}<span>Recevoir le code</span></button></form>
         <p class="sub" style="font-size:12.5px;margin-top:14px">Pas encore de compte ? Créez votre super-admin depuis votre espace client sur le site Dental Assist.</p>`)
     }

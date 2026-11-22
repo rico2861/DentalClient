@@ -30,8 +30,8 @@ const sha = s => crypto.createHash('sha256').update(s).digest('hex')
 let pass = 0, fail = 0
 const check = (ok, label) => { if (ok) { pass++; console.log('  ✔', label) } else { fail++; console.log('  ✖', label) } }
 
-// Provisionne la clinique du propriétaire, liée à la licence « LIC-CID-1 »
-const prov = await (await post('/api/provision', { clinic: { name: 'Clinique Z', license_cid: 'LIC-CID-1' }, owner: { email: 'owner-z@test.local', password: 'motdepasse12', last_name: 'Z' } }, { 'x-provision-secret': 'prov-secret-123456' })).json()
+// Provisionne la clinique du propriétaire, liée à la clé « DNTL-AAAA-BBBB » (cid « LIC-CID-1 »)
+const prov = await (await post('/api/provision', { clinic: { name: 'Clinique Z', license_cid: 'LIC-CID-1', license_key: 'DNTL-AAAA-BBBB' }, owner: { email: 'owner-z@test.local', password: 'motdepasse12', last_name: 'Z' } }, { 'x-provision-secret': 'prov-secret-123456' })).json()
 check(prov.created === true && prov.owner_id, 'Provisioning de la clinique du propriétaire')
 await q('update clinics set require_2fa=false where id=$1', [prov.clinic_id])
 // une 2e clinique, pour vérifier la liaison au bon clinic_id
@@ -39,12 +39,15 @@ const prov2 = await (await post('/api/provision', { clinic: { name: 'Autre', lic
 const pZ = (await q("insert into patients(clinic_id,last_name,first_name,phone,address,emergency_contact,created_by) values($1,'PatZ','x','1','a','e',$2) returning id", [prov.clinic_id, prov.owner_id])).rows[0].id
 await q("insert into patients(clinic_id,last_name,first_name,phone,address,emergency_contact,created_by) values($1,'PatY','x','2','a','e',$2)", [prov2.clinic_id, prov2.owner_id])
 
-// (a) licence malformée → 400 LICENSE_BAD
-{ const r = await post('/api/login/owner/request', { license: 'DL1.bad.sig' }); const j = await r.json()
-  check(r.status === 400 && j.code === 'LICENSE_BAD', 'Licence invalide → refus (LICENSE_BAD)') }
-// (b) licence valide mais aucune clinique rattachée → 404 NO_ACCOUNT
-{ const r = await post('/api/login/owner/request', { license: makeLicense('CID-INCONNU') }); const j = await r.json()
-  check(r.status === 404 && j.code === 'NO_ACCOUNT', 'Licence sans compte → NO_ACCOUNT (invite à créer le compte)') }
+// (a) licence vide → 400 LICENSE_BAD
+{ const r = await post('/api/login/owner/request', { license: '  ' }); const j = await r.json()
+  check(r.status === 400 && j.code === 'LICENSE_BAD', 'Licence vide → refus (LICENSE_BAD)') }
+// (b) clé inconnue → 404 NO_ACCOUNT
+{ const r = await post('/api/login/owner/request', { license: 'DNTL-ZZZZ-9999' }); const j = await r.json()
+  check(r.status === 404 && j.code === 'NO_ACCOUNT', 'Clé sans compte → NO_ACCOUNT (invite à créer le compte)') }
+// (b2) bonne clé → le propriétaire est résolu (l'envoi e-mail échoue en test → 503, pas 404)
+{ const r = await post('/api/login/owner/request', { license: 'DNTL-AAAA-BBBB' })
+  check(r.status !== 404, 'Bonne clé → propriétaire résolu (pas NO_ACCOUNT)') }
 
 // (c) chemin critique : OTP correct → session liée au bon clinic_id
 // on insère un code OTP connu (kind 'owner') et on forge le défi comme le fait /request

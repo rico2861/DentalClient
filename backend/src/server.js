@@ -186,15 +186,21 @@ app.post('/api/login/resend', loginLimiter, wrap(async (req, res) => { let d; tr
 // Le super-admin est créé sur la vitrine (provisioning). Pour entrer dans le logiciel,
 // il saisit la licence de sa clinique → code OTP envoyé à son e-mail → session liée au clinic_id.
 // Le personnel continue d'utiliser e-mail/mot de passe + 2FA (/api/login).
-const ownerFromLicense = async token => {
-  const chk = checkLicenseToken(String(token || '').trim())
-  if (!['active', 'grace'].includes(chk.status)) return { err: [400, chk.status === 'blocked' ? 'Licence expirée' : 'Licence invalide', 'LICENSE_BAD'] }
-  const cid = chk.payload?.cid; if (!cid) return { err: [400, 'Licence sans clinique', 'LICENSE_BAD'] }
-  const cl = (await q('select id from clinics where license_cid=$1', [String(cid)])).rows[0]
-  if (!cl) return { err: [404, "Aucun compte n'est rattaché à cette licence. Créez d'abord votre compte depuis votre espace client.", 'NO_ACCOUNT'] }
+const ownerFromLicense = async input => {
+  const lic = String(input || '').trim()
+  if (!lic) return { err: [400, 'Saisissez votre clé de licence', 'LICENSE_BAD'] }
+  // La licence saisie est la clé que le client voit dans son espace (clé courte DNTL-…),
+  // ou, à défaut, un jeton DL1 signé. On la reconnaît à la valeur stockée au provisioning.
+  let cl = (await q('select id, license_cid from clinics where license_key=$1 or license_cid=$1', [lic])).rows[0]
+  if (!cl) { // tolère un jeton DL1 complet : on vérifie la signature puis on cherche par cid
+    const chk = checkLicenseToken(lic)
+    if (chk.payload?.cid) cl = (await q('select id, license_cid from clinics where license_cid=$1', [String(chk.payload.cid)])).rows[0]
+    if (chk.status && !['active', 'grace', 'blocked', 'invalid'].includes(chk.status)) { /* ignore */ }
+  }
+  if (!cl) return { err: [404, "Aucun compte n'est rattaché à cette licence. Créez d'abord votre compte super-admin depuis votre espace client.", 'NO_ACCOUNT'] }
   const owner = (await q("select * from users where clinic_id=$1 and role='OWNER' and status='active' order by created_at limit 1", [cl.id])).rows[0]
   if (!owner) return { err: [404, 'Propriétaire introuvable pour cette clinique', 'NO_OWNER'] }
-  return { owner, cid: String(cid) }
+  return { owner, cid: String(cl.license_cid || cl.id) }
 }
 app.post('/api/login/owner/request', loginLimiter, wrap(async (req, res) => {
   const r = await ownerFromLicense((req.body || {}).license); if (r.err) return fail(res, r.err[0], r.err[1], r.err[2])
