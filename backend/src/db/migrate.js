@@ -48,18 +48,23 @@ export async function provisionClinic(client, { clinic = {}, owner = {} } = {}, 
   const pwd = String(owner.password || '')
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('owner.email valide requis')
   if (pwd.length < 10) throw new Error('owner.password (10 caractères minimum) requis')
-  // idempotent : même e-mail déjà provisionné → on renvoie sa clinique, sans rien recréer
-  const ex = (await client.query('select id, clinic_id from users where email=$1', [email])).rows[0]
+  const licenseCid = clinic.license_cid ? String(clinic.license_cid).slice(0, 120) : null
+  // idempotent : même e-mail OU même licence déjà provisionné → on renvoie sa clinique, sans rien recréer
+  const ex = (await client.query(
+    'select u.id, u.clinic_id from users u join clinics c on c.id=u.clinic_id where u.email=$1 or ($2::text is not null and c.license_cid=$2) limit 1',
+    [email, licenseCid])).rows[0]
   if (ex) { log('Clinique déjà provisionnée pour', email); return { clinic_id: ex.clinic_id, owner_id: ex.id, created: false } }
   await client.query('begin')
   try {
-    const { rows: [cl] } = await client.query('insert into clinics(name,address,phone) values($1,$2,$3) returning id',
-      [String(clinic.name || 'Clinique').slice(0, 120), clinic.address ? String(clinic.address).slice(0, 200) : null, clinic.phone ? String(clinic.phone).slice(0, 40) : null])
+    const { rows: [cl] } = await client.query('insert into clinics(name,address,phone,license_cid) values($1,$2,$3,$4) returning id',
+      [String(clinic.name || 'Clinique').slice(0, 120), clinic.address ? String(clinic.address).slice(0, 200) : null, clinic.phone ? String(clinic.phone).slice(0, 40) : null, licenseCid])
+    // le propriétaire choisit son mot de passe sur la vitrine → must_change_password=false (sauf demande explicite)
+    const mustChange = owner.must_change_password === true
     const { rows: [u] } = await client.query(
-      "insert into users(clinic_id,email,password_hash,first_name,last_name,role,must_change_password) values($1,$2,$3,$4,$5,'OWNER',true) returning id",
-      [cl.id, email, await bcrypt.hash(pwd, 12), String(owner.first_name || 'Propriétaire').slice(0, 80), String(owner.last_name || '').slice(0, 80)])
+      "insert into users(clinic_id,email,password_hash,first_name,last_name,role,must_change_password) values($1,$2,$3,$4,$5,'OWNER',$6) returning id",
+      [cl.id, email, await bcrypt.hash(pwd, 12), String(owner.first_name || 'Propriétaire').slice(0, 80), String(owner.last_name || '').slice(0, 80), mustChange])
     await client.query('commit')
-    log('Clinique provisionnée :', cl.id, '— propriétaire', email)
+    log('Clinique provisionnée :', cl.id, '— propriétaire', email, licenseCid ? '— licence ' + licenseCid : '')
     return { clinic_id: cl.id, owner_id: u.id, created: true }
   } catch (e) { await client.query('rollback'); throw e }
 }

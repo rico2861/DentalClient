@@ -9,7 +9,8 @@ import dossier from './routes/dossier.js'; import tariffs from './routes/tariffs
 import { ALL, SENSITIVE, ROLES, makePermissions, assignedSql } from './core/permissions.js'
 import billing from './routes/billing.js'; import clinical from './routes/clinical.js'; import stock from './routes/stock.js'; import cash from './routes/cash.js'
 import planning from './routes/planning.js'; import intel from './routes/intel.js'; import { startIntel } from './lib/intel.js'; import { startCloud } from './lib/cloud.js'; import { ensureLogTriggers, startPlus, maintenance } from './lib/backup-plus.js'; import reports from './routes/reports.js'; import queue from './routes/queue.js'; import documents from './routes/documents.js'
-import security, { notify as notifyQ, verifySecondFactor, sendEmailCode } from './routes/security.js'; import clinical2 from './routes/clinical2.js'; import requests from './routes/requests.js'
+import security, { notify as notifyQ, verifySecondFactor, sendEmailCode, verifyCode, maskEmail } from './routes/security.js'; import clinical2 from './routes/clinical2.js'; import requests from './routes/requests.js'
+import { checkLicense as checkLicenseToken } from './lib/license-core.js'   // vérification de la licence saisie au login propriétaire (instance partagée)
 import { sealJson, protectExisting } from './lib/protect.js'
 import recovery from './routes/recovery.js'
 import * as license from './lib/license.js'   // porte de licence (ajout — ne modifie aucune gestion)
@@ -181,6 +182,37 @@ app.post('/api/login/otp', loginLimiter, wrap(async (req, res) => {
   await finishLogin(req, res, u) }))
 app.post('/api/login/resend', loginLimiter, wrap(async (req, res) => { let d; try { d = jwt.verify(req.body.challenge || '', SECRET) } catch { return fail(res, 401, 'Défi expiré : reconnectez-vous') } if (d.p !== 'otp') return fail(res, 401, 'Défi invalide')
   const u = (await q('select * from users where id=$1', [d.id])).rows[0]; if (!u?.mfa_email || u.token_version !== d.tv) return fail(res, 400, 'Envoi par e-mail non disponible'); const r = await sendEmailCode(q, u); r.sent ? res.json(r) : fail(res, r.wait ? 429 : 503, r.reason) }))
+// ── Connexion PROPRIÉTAIRE par LICENCE + OTP e-mail (instance web partagée) ──
+// Le super-admin est créé sur la vitrine (provisioning). Pour entrer dans le logiciel,
+// il saisit la licence de sa clinique → code OTP envoyé à son e-mail → session liée au clinic_id.
+// Le personnel continue d'utiliser e-mail/mot de passe + 2FA (/api/login).
+const ownerFromLicense = async token => {
+  const chk = checkLicenseToken(String(token || '').trim())
+  if (!['active', 'grace'].includes(chk.status)) return { err: [400, chk.status === 'blocked' ? 'Licence expirée' : 'Licence invalide', 'LICENSE_BAD'] }
+  const cid = chk.payload?.cid; if (!cid) return { err: [400, 'Licence sans clinique', 'LICENSE_BAD'] }
+  const cl = (await q('select id from clinics where license_cid=$1', [String(cid)])).rows[0]
+  if (!cl) return { err: [404, "Aucun compte n'est rattaché à cette licence. Créez d'abord votre compte depuis votre espace client.", 'NO_ACCOUNT'] }
+  const owner = (await q("select * from users where clinic_id=$1 and role='OWNER' and status='active' order by created_at limit 1", [cl.id])).rows[0]
+  if (!owner) return { err: [404, 'Propriétaire introuvable pour cette clinique', 'NO_OWNER'] }
+  return { owner, cid: String(cid) }
+}
+app.post('/api/login/owner/request', loginLimiter, wrap(async (req, res) => {
+  const r = await ownerFromLicense((req.body || {}).license); if (r.err) return fail(res, r.err[0], r.err[1], r.err[2])
+  const sent = await sendEmailCode(q, r.owner, 'owner'); if (!sent.sent) return fail(res, sent.wait ? 429 : 503, sent.reason)
+  res.json({ sent: true, email: sent.to || maskEmail(r.owner.email), recent: !!sent.recent,
+    challenge: jwt.sign({ id: r.owner.id, tv: r.owner.token_version, cid: r.cid, p: 'ownerotp' }, SECRET, { expiresIn: '10m' }) }) }))
+app.post('/api/login/owner/verify', loginLimiter, wrap(async (req, res) => {
+  let d; try { d = jwt.verify((req.body || {}).challenge || '', SECRET) } catch { return fail(res, 401, 'Défi expiré : recommencez') }
+  if (d.p !== 'ownerotp') return fail(res, 401, 'Défi invalide')
+  const owner = (await q('select * from users where id=$1', [d.id])).rows[0]
+  if (!owner || owner.token_version !== d.tv || owner.status !== 'active') return fail(res, 401, 'Session invalide : recommencez')
+  if (!await verifyCode(q, owner, (req.body || {}).code, ['owner'])) return fail(res, 400, 'Code incorrect ou expiré')
+  await newSession(req, res, owner); res.json({ ok: true }) }))
+app.post('/api/login/owner/resend', loginLimiter, wrap(async (req, res) => {
+  let d; try { d = jwt.verify((req.body || {}).challenge || '', SECRET) } catch { return fail(res, 401, 'Défi expiré : recommencez') }
+  if (d.p !== 'ownerotp') return fail(res, 401, 'Défi invalide')
+  const owner = (await q('select * from users where id=$1', [d.id])).rows[0]; if (!owner || owner.token_version !== d.tv) return fail(res, 400, 'Indisponible')
+  const r = await sendEmailCode(q, owner, 'owner'); r.sent ? res.json(r) : fail(res, r.wait ? 429 : 503, r.reason) }))
 app.post('/api/logout', wrap(async (req, res) => { try { const d = jwt.verify(req.cookies.dl || '', SECRET); if (d.sid) await q('update user_sessions set revoked_at=now() where id=$1', [d.sid]) } catch {} res.clearCookie('dl'); res.json({ ok: true }) }))
 app.get('/api/me', auth, (req, res) => { const u = req.user
   res.json({ id: u.id, username: u.username, first_name: u.first_name, last_name: u.last_name, role: u.role, must_change_password: u.must_change_password, totp_enabled: u.totp_enabled, idle_minutes: u.idle,

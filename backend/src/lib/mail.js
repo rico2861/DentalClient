@@ -41,7 +41,7 @@ async function post(url, body, headers = {}) {
 }
 
 export async function sendViaResend({ to, subject, text, html }) {
-  const from = process.env.MAIL_FROM ? (process.env.MAIL_FROM.includes('<') ? process.env.MAIL_FROM : `DENTAL <${process.env.MAIL_FROM}>`) : 'DENTAL <onboarding@resend.dev>'
+  const from = process.env.MAIL_FROM ? (process.env.MAIL_FROM.includes('<') ? process.env.MAIL_FROM : `Dental Assist <${process.env.MAIL_FROM}>`) : 'Dental Assist <onboarding@resend.dev>'
   await post('https://api.resend.com/emails', { from, to, subject, html: html || text, text }, { Authorization: `Bearer ${process.env.RESEND_API_KEY}` })
   return { ok: true }
 }

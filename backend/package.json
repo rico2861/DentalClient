@@ -15,6 +15,7 @@
     "dev": "node --watch src/server.js",
     "test": "node tests/run.mjs",
     "test:isolation": "node tests/isolation.mjs",
+    "test:owner-login": "node tests/owner-login.mjs",
     "demo": "node scripts/demo.js",
     "recuperation": "node scripts/recuperation.js",
     "service:installer": "node scripts/service.js installer",
