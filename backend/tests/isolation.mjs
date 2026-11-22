@@ -28,6 +28,7 @@ Object.assign(process.env, {
   LICENSE_PUBLIC_KEY: pubPem,
   DL_SKIP_PORT_CHECK: '1',
   KEEP_SESSIONS: 'true',
+  PROVISION_SECRET: 'secret-de-provisioning-partage-123456',
   CLINIC_TZ: 'America/Port-au-Prince'
 })
 // pas d'OWNER_EMAIL : on crée nous-mêmes les cliniques (multi-tenant)
@@ -136,6 +137,50 @@ const check = (ok, label) => { if (ok) { pass++; console.log('  ✔', label) } e
 {
   const n = (await q('select 1 from patients where id=$1 and clinic_id=$2', [pB, A.clinic])).rowCount
   check(n === 0, "Requête directe (patient de B filtré par clinic_id de A) : 0 ligne")
+}
+
+// ── 7) Provisioning de service (instance partagée) ───────────────────────────
+async function provision (body, secret = process.env.PROVISION_SECRET) {
+  return fetch(base + '/api/provision', { method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-provision-secret': secret || '' },
+    body: JSON.stringify(body) })
+}
+// (h) secret invalide → 401 (aucune clinique créée)
+{
+  const r = await provision({ owner: { email: 'x@x.co', password: 'motdepasse12' } }, 'mauvais')
+  check(r.status === 401, 'Provision avec mauvais secret : refusé (401)')
+}
+// (i) provisioning valide → crée clinique C + propriétaire
+let C = null
+{
+  const r = await provision({ clinic: { name: 'CliniqueC' }, owner: { email: 'owner-c@test.local', password: 'motdepasse12', last_name: 'C' } })
+  const j = await r.json()
+  check(r.ok && j.created === true && j.clinic_id && j.owner_id, 'Provision valide : clinique C créée')
+  if (j.clinic_id) {
+    // Le provisioning laisse à dessein les protections par défaut (changement de
+    // mot de passe + 2FA obligatoires au 1er login). On les simule effectuées
+    // pour exercer les routes applicatives, comme pour A et B.
+    await q('update users set must_change_password=false where id=$1', [j.owner_id])
+    await q('update clinics set require_2fa=false where id=$1', [j.clinic_id])
+    const { rows: [s] } = await q("insert into user_sessions(user_id,ip,user_agent) values($1,'127.0.0.1','test') returning id", [j.owner_id])
+    C = { clinic: j.clinic_id, owner: j.owner_id, cookie: 'dl=' + jwt.sign({ id: j.owner_id, sid: s.id, tv: 0 }, SECRET), name: 'CliniqueC' }
+  }
+}
+// (j) idempotence : re-provisionner le même e-mail ne crée pas de doublon
+{
+  const r = await provision({ clinic: { name: 'CliniqueC' }, owner: { email: 'owner-c@test.local', password: 'motdepasse12' } })
+  const j = await r.json()
+  check(r.ok && j.created === false && C && j.clinic_id === C.clinic, 'Provision idempotente : pas de doublon pour le même e-mail')
+}
+// (k) la clinique provisionnée C est isolée de A et B
+if (C) {
+  const pC = await addPatient(C, 'Charlie', 'Chloé', '0003')
+  const rowsC = (await (await get('/api/patients', C)).json()).rows || []
+  check(rowsC.length === 1 && rowsC[0].id === pC, 'C ne voit que son propre patient')
+  const rA = await get(`/api/patients/${pC}/summary`, A)
+  check(rA.status === 404, "A → patient de C : refusé (404)")
+  const rowsA = (await (await get('/api/patients', A)).json()).rows || []
+  check(!rowsA.some(r => r.id === pC), "La liste de A ne fait pas fuiter le patient de C")
 }
 
 console.log(`\nIsolation : ${pass} réussis, ${fail} échec(s).`)

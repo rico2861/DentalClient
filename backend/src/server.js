@@ -4,7 +4,7 @@ import express from 'express'; import helmet from 'helmet'; import rateLimit fro
 import cookieParser from 'cookie-parser'; import jwt from 'jsonwebtoken'; import bcrypt from 'bcryptjs'; import crypto from 'crypto'
 import { pool, q, actorCtx } from './db/pool.js'
 import { payPlan } from './lib/billing-core.js'
-import { migrate, ensureOwner } from './db/migrate.js'
+import { migrate, ensureOwner, provisionClinic } from './db/migrate.js'
 import dossier from './routes/dossier.js'; import tariffs from './routes/tariffs.js'; import backups from './routes/backups.js'; import { startScheduler } from './lib/backup.js'; import { startAlerts, runAlerts } from './lib/alerts.js'
 import { ALL, SENSITIVE, ROLES, makePermissions, assignedSql } from './core/permissions.js'
 import billing from './routes/billing.js'; import clinical from './routes/clinical.js'; import stock from './routes/stock.js'; import cash from './routes/cash.js'
@@ -57,6 +57,21 @@ app.post('/api/license/request-otp', wrap(async (req, res) => { try { res.json(a
 app.post('/api/license/verify-otp', wrap(async (req, res) => { try { res.json(await license.activateWithOtp(req.body || {})) } catch (e) { fail(res, e.http || 400, e.message, e.code) } }))
 app.post('/api/license/key', wrap(async (req, res) => { try { res.json(license.installKey((req.body || {}).token)) } catch (e) { fail(res, 400, e.message, e.code) } }))
 app.post('/api/license/check', wrap(async (req, res) => { const r = await license.checkRemote(); res.json({ ...r, ...license.status() }) }))
+// Provisioning de service (instance partagée) : la plate-forme (BackendDental) crée
+// une clinique + son propriétaire à l'activation d'une licence. Authentifié par secret
+// partagé (comparaison à temps constant), hors porte de licence car indépendant de l'état
+// de licence d'une clinique donnée. Désactivé si PROVISION_SECRET n'est pas configuré.
+app.post('/api/provision', wrap(async (req, res) => {
+  const secret = config.provisionSecret
+  if (!secret) return fail(res, 503, 'Provisioning non configuré', 'PROVISION_OFF')
+  const given = Buffer.from(String(req.get('x-provision-secret') || ''))
+  const want = Buffer.from(secret)
+  if (given.length !== want.length || !crypto.timingSafeEqual(given, want)) return fail(res, 401, 'Secret de provisioning invalide')
+  const c = await pool.connect()
+  try { res.json(await provisionClinic(c, req.body || {}, () => {})) }
+  catch (e) { fail(res, 400, e.message) }
+  finally { c.release() }
+}))
 // Puis la porte : tout le reste de /api/* est bloqué si la licence n'est pas valable.
 app.use(license.licenseGate)
 

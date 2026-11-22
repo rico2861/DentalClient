@@ -38,3 +38,28 @@ export async function ensureOwner(client, email, password, log = console.log) {
   log('Clinique et propriétaire créés. Changement de mot de passe exigé à la 1re connexion.')
   return true
 }
+
+// Provisioning MULTI-CLINIQUE (instance web partagée) : crée une clinique + son
+// propriétaire dans la base partagée. Appelé de service à service par la plate-
+// forme (BackendDental) à l'activation d'une licence. Idempotent par e-mail du
+// propriétaire, transactionnel : jamais de clinique à moitié créée.
+export async function provisionClinic(client, { clinic = {}, owner = {} } = {}, log = console.log) {
+  const email = String(owner.email || '').toLowerCase().trim()
+  const pwd = String(owner.password || '')
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('owner.email valide requis')
+  if (pwd.length < 10) throw new Error('owner.password (10 caractères minimum) requis')
+  // idempotent : même e-mail déjà provisionné → on renvoie sa clinique, sans rien recréer
+  const ex = (await client.query('select id, clinic_id from users where email=$1', [email])).rows[0]
+  if (ex) { log('Clinique déjà provisionnée pour', email); return { clinic_id: ex.clinic_id, owner_id: ex.id, created: false } }
+  await client.query('begin')
+  try {
+    const { rows: [cl] } = await client.query('insert into clinics(name,address,phone) values($1,$2,$3) returning id',
+      [String(clinic.name || 'Clinique').slice(0, 120), clinic.address ? String(clinic.address).slice(0, 200) : null, clinic.phone ? String(clinic.phone).slice(0, 40) : null])
+    const { rows: [u] } = await client.query(
+      "insert into users(clinic_id,email,password_hash,first_name,last_name,role,must_change_password) values($1,$2,$3,$4,$5,'OWNER',true) returning id",
+      [cl.id, email, await bcrypt.hash(pwd, 12), String(owner.first_name || 'Propriétaire').slice(0, 80), String(owner.last_name || '').slice(0, 80)])
+    await client.query('commit')
+    log('Clinique provisionnée :', cl.id, '— propriétaire', email)
+    return { clinic_id: cl.id, owner_id: u.id, created: true }
+  } catch (e) { await client.query('rollback'); throw e }
+}

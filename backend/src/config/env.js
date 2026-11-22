@@ -21,6 +21,7 @@ const PROJECT = path.resolve(ROOT, '..')
 export const config = {
   root: ROOT,
   secret: process.env.JWT_SECRET,
+  provisionSecret: process.env.PROVISION_SECRET || '',
   prod: process.env.NODE_ENV === 'production',
   hosted: HOSTED, volume: VOLUME,
   port: Number(process.env.PORT) || 3000,
