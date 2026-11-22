@@ -1,0 +1,25 @@
+node_modules/
+.env
+backend/storage/
+backups/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+
+backend/data/
+
+# données patients et copies de restauration : jamais sur GitHub
+backend/storage*/
+backend/data*/
+backend/backups*/
+*.avant-restauration-*
+*kit-recuperation*.txt
+
+# clinique de démonstration (données fictives, base séparée)
+backend/demo-data/
+
+# journaux du service (démarrage automatique)
+backend/logs/
+backend/scripts/service-cache.vbs
+backend/scripts/service-surveillance.vbs

@@ -1,0 +1,23 @@
+# Déploiement web de DENTAL sur Render (https://render.com).
+# New + → Blueprint → connectez le dépôt DentalClient → Render lit ce fichier.
+services:
+  - type: web
+    name: dentalclient-web
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter            # le volume de données nécessite un plan payant ; "free" marche pour une démo (données réinitialisées aux redémarrages)
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true   # généré une fois, stable : chiffre les données et les sessions
+      - key: DATA_ROOT
+        value: /data
+      - key: SAAS_URL
+        sync: false           # URL de votre backend SaaS (licences, e-mails relayés)
+      - key: OWNER_EMAIL
+        value: proprietaire@exemple.com
+      - key: OWNER_PASSWORD
+        sync: false           # mot de passe propriétaire initial (à changer à la 1re connexion)
+    disk:
+      name: dental-data
+      mountPath: /data
+      sizeGB: 1

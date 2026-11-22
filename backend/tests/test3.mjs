@@ -1,0 +1,56 @@
+const B = 'http://localhost:3999/api'
+const mk = () => { let ck = ''; const f = async (m, p, b, raw) => { const r = await fetch(B + p, { method: m, headers: raw ? { 'Content-Type': 'application/octet-stream', ...raw, cookie: ck } : { 'Content-Type': 'application/json', cookie: ck }, body: raw ? b : b ? JSON.stringify(b) : undefined }); const sc = r.headers.get('set-cookie'); if (sc) ck = sc.split(';')[0]
+  const buf = Buffer.from(await r.arrayBuffer()); let j = {}; try { j = JSON.parse(buf.toString()) } catch {} return { s: r.status, j, buf, ct: r.headers.get('content-type') || '', text: buf.toString() } }; f.nocookie = async p => (await fetch(B + p)).status; return f }
+let ok = 0, ko = 0; const T = (n, c, x) => { c ? ok++ : ko++; console.log(c ? 'PASS' : 'FAIL', n, c ? '' : JSON.stringify(x)?.slice(0, 300)) }
+const o = mk(); await o('POST', '/login', { email: 'owner@test.com', password: 'NouveauMdp#2026a' })
+const d = (await o('GET', '/dashboard/owner')).j
+T('dashboard : patients 3 / actifs 3', d.medical.patients_total === 3 && d.medical.patients_active === 3 && d.medical.patients_inactive === 0, d.medical)
+T('dashboard : encaissements 6000, dépenses 6500, résultat -500', d.finance.revenue_year === '6000.00' && d.finance.expenses_year === '6500.00' && d.finance.profit_year === '-500.00', d.finance)
+T('dashboard : créances 9000, dettes fournisseurs 0', d.finance.receivables_htg === '9000.00' && d.finance.supplier_debts_htg === '0.00', d.finance)
+T('dashboard : soldes de caisse cohérents (8500 + 1000)', d.finance.cash.reduce((s, c) => s + Number(c.balance), 0) === 9500, d.finance.cash)
+T('dashboard : valeur du stock 4700', d.stock.value === '4700.00' && d.stock.low === 0, d.stock)
+T('dashboard : courbe 6 mois (dernier = 6000)', d.charts.revenue_6m.length === 6 && d.charts.revenue_6m[5].v === 6000 && d.charts.profit_6m[5].v === -500, d.charts.revenue_6m)
+const y = (await o('GET', '/dashboard/owner?period=year')).j; T('filtre année', y.period.kind === 'year' && y.period.from.endsWith('-01-01') && y.period.to.endsWith('-12-31'), y.period)
+const sec = mk(); await sec('POST', '/login', { email: 'sec2@test.com', password: 'SecretMdp#2026b' }); const sd = (await sec('GET', '/dashboard/owner')).j
+T('dashboard secrétaire : aucune donnée financière ni salariale', !sd.finance && !sd.staff && !sd.stock && !!sd.medical, Object.keys(sd))
+const cat = (await o('GET', '/reports')).j; T('catalogue complet pour le propriétaire (15 rapports)', cat.length === 15, cat.length)
+T('secrétaire : catalogue limité aux patients', (await sec('GET', '/reports')).j.map(r => r.key).join() === 'patients')
+T('secrétaire : rapport des revenus interdit', (await sec('GET', '/reports/revenues')).s === 403)
+T('secrétaire : export CSV interdit (pas export_reports)', (await sec('GET', '/reports/patients?format=csv')).s === 403)
+let r = await o('GET', '/reports/revenues?format=csv'); const lines = r.text.replace('\ufeff', '').trim().split('\r\n')
+T('CSV revenus : en-tête + 2 paiements', r.s === 200 && r.ct.includes('text/csv') && lines.length === 3 && lines[0].startsWith('Date;Facture'), lines)
+r = await o('GET', '/reports/revenues?format=xlsx'); T('Excel valide (PK)', r.s === 200 && r.buf.subarray(0, 2).toString() === 'PK' && r.ct.includes('spreadsheetml'), r.s)
+r = await o('GET', '/reports/expenses?format=pdf'); T('PDF valide', r.s === 200 && r.buf.subarray(0, 4).toString() === '%PDF', r.s)
+r = await o('GET', '/reports/revenues'); T('JSON : total des lignes', r.j.total === 2 && r.j.rows[0].amount_htg, r.j)
+const pp = (await o('GET', '/reports/profit_prostheses')).j; T('marge prothèse = 4000', pp.rows[0]?.margin === '4000.00', pp)
+const pd = (await o('GET', '/reports/profit_doctors')).j.rows.find(x => x.doctor.startsWith('Propri')); T('marge médecin = 3000 + 6000 - 300 - 2000 = 6700', pd?.margin_htg === '6700.00', pd)
+T('créances et dettes', (await o('GET', '/reports/receivables')).j.total === 2 && (await o('GET', '/reports/debts')).s === 200)
+const inj = (await o('POST', '/patients', { last_name: '=HYPERLINK("http://evil")', first_name: 'X' })).j; await o('POST', '/patients', { last_name: 'Doc', first_name: 'Test' })
+r = await o('GET', `/reports/patients?format=csv&from=2000-01-01&to=2100-01-01`); T('CSV : injection de formule neutralisée', r.text.includes(`"'=HYPERLINK`) && !r.text.includes(';=HYPERLINK') && !r.text.includes('"=HYPERLINK'), r.text.slice(0, 400))
+const dr = mk(); await dr('POST', '/login', { email: 'dr2@test.com', password: 'DocteurMdp#2026c' })
+T('médecin : rapport consultations en JSON', (await dr('GET', '/reports/consultations')).s === 200); T('médecin : export refusé', (await dr('GET', '/reports/consultations?format=csv')).s === 403); T('médecin : pas de rapport salaires', (await dr('GET', '/reports/salaries')).s === 403)
+// Documents
+const pats = (await o('GET', '/patients?q=Doc')).j.rows, pid = pats[0].id, pdf = Buffer.from('%PDF-1.4\n%contenu de test pour DENTAL\n')
+r = await o('POST', `/patients/${pid}/documents`, pdf, { 'x-doc-kind': 'ordonnance', 'x-file-name': encodeURIComponent('ordonnance é.pdf') }); T('upload PDF', r.s === 200 && r.j.id, r); const doc = r.j.id
+r = await o('POST', `/patients/${pid}/documents`, Buffer.from('MZ\x90\x00 programme malveillant ...........'), { 'x-doc-kind': 'pdf', 'x-file-name': 'virus.pdf' }); T('fichier exécutable refusé (415)', r.s === 415, r)
+r = await o('POST', `/patients/${pid}/documents`, Buffer.from('<html><script>alert(1)</script></html>'), { 'x-doc-kind': 'photo', 'x-file-name': 'a.png' }); T('HTML déguisé en image refusé', r.s === 415, r)
+r = await o('POST', `/patients/${pid}/documents`, pdf, { 'x-doc-kind': 'inconnu', 'x-file-name': 'a.pdf' }); T('type de document invalide refusé', r.s === 400, r)
+r = await o('POST', `/patients/${pid}/documents`, Buffer.alloc(11 * 1024 * 1024, 1), { 'x-doc-kind': 'pdf', 'x-file-name': 'gros.pdf' }); T('fichier > 10 Mo refusé (413)', r.s === 413, r.s)
+T('liste des documents', (await o('GET', `/patients/${pid}/documents`)).j.length === 1)
+const lk = (await o('GET', `/documents/${doc}/link`)).j; r = await o('GET', lk.url.replace('/api', '')); T('lien temporaire : contenu identique, nosniff', r.s === 200 && r.buf.equals(pdf) && r.ct.includes('application/pdf'), r.s)
+T('lien sans session : refusé', (await o.nocookie(lk.url.replace('/api', ''))) === 401)
+const other = (await sec('GET', `/documents/${doc}/link`)); T('secrétaire : pas d\'accès aux documents médicaux', other.s === 403, other.s)
+T('médecin non assigné : accès refusé', (await dr('GET', `/documents/${doc}/link`)).s === 404 && (await dr('GET', `/patients/${pid}/documents`)).s === 404)
+const bad = jwtLike => o('GET', `/files/${jwtLike}`); T('jeton falsifié refusé', (await bad('abc.def.ghi')).s === 410)
+r = await o('POST', `/documents/${doc}/archive`, {}); T('archivage (pas de suppression)', r.s === 200 && (await o('GET', `/patients/${pid}/documents`)).j.length === 0 && (await o('GET', `/documents/${doc}/link`)).s === 404)
+// Consentements
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+const tpl = (await o('GET', '/consent-templates')).j; T('4 modèles de consentement', Object.keys(tpl).length === 4)
+r = await o('POST', `/patients/${pid}/consents`, { kind: 'treatment_consent', body: tpl.treatment_consent, signer_name: 'Test Doc', signature: PNG }); T('consentement signé', r.s === 200 && r.j.integrity_hash?.length === 64, r)
+T('signature manquante refusée', (await o('POST', `/patients/${pid}/consents`, { kind: 'treatment_consent', body: tpl.treatment_consent, signer_name: 'X' })).s === 400)
+T('signature non-PNG refusée', (await o('POST', `/patients/${pid}/consents`, { kind: 'treatment_consent', body: tpl.treatment_consent, signer_name: 'X', signature: 'data:image/png;base64,' + Buffer.from('pas une image du tout').toString('base64') })).s === 400)
+const cl = (await o('GET', `/patients/${pid}/consents`)).j; T('liste des consentements', cl.length === 1 && cl[0].collected_by)
+r = await o('GET', `/consents/${cl[0].id}/pdf`); T('PDF du consentement', r.s === 200 && r.buf.subarray(0, 4).toString() === '%PDF', r.s)
+T('secrétaire : pas d\'accès aux consentements', (await sec('GET', `/consents/${cl[0].id}/pdf`)).s === 403)
+const au = (await o('GET', '/audit')).j.map(a => a.action); T('audit : export, consultation de document, consentement', ['REPORT_EXPORTED', 'DOCUMENT_VIEWED', 'DOCUMENT_UPLOADED', 'CONSENT_SIGNED'].every(a => au.includes(a)), [...new Set(au)])
+console.log(`\n${ok} réussis, ${ko} échoués`)
