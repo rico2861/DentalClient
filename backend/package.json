@@ -14,6 +14,7 @@
     "start": "node scripts/init-env.js && node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node tests/run.mjs",
+    "test:isolation": "node tests/isolation.mjs",
     "demo": "node scripts/demo.js",
     "recuperation": "node scripts/recuperation.js",
     "service:installer": "node scripts/service.js installer",
