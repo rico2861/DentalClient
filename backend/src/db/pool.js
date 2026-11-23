@@ -43,10 +43,15 @@ if (DB_URL) {
   pg.types.setTypeParser(1082, v => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d) })
 
   const ssl = /supabase|railway|render|amazonaws|neon|heroku/.test(DB_URL) ? { rejectUnauthorized: false } : undefined
-  // search_path + fuseau fixés à l'ouverture de CHAQUE connexion, côté serveur (aucune course)
+  // Render ne route pas l'IPv6 : préférer l'IPv4 (et utiliser le POOLER Supabase, qui est en IPv4).
+  try { (await import('node:dns')).setDefaultResultOrder('ipv4first') } catch {}
+  // search_path + fuseau passés au démarrage de connexion (côté serveur, aucune course)
   const options = `-c search_path=${SCHEMA},public -c timezone=${TZ}`
   const pg_pool = new pg.Pool({ connectionString: DB_URL, ssl, options, max: Number(process.env.DB_POOL_MAX) || 8 })
   pg_pool.on('error', e => console.error('Pool Postgres :', e.message))
+  // Filet de sécurité : certains poolers (pgBouncer/Supavisor) ignorent les options de démarrage.
+  // On refixe search_path + fuseau à l'ouverture de CHAQUE connexion (pooler en mode SESSION requis).
+  pg_pool.on('connect', c => { c.query(`set search_path to ${SCHEMA}, public`).catch(() => {}); c.query(`set time zone '${TZ}'`).catch(() => {}) })
 
   // le schéma dédié doit exister avant les migrations
   { const c = await pg_pool.connect(); try { await c.query(`create schema if not exists ${SCHEMA}`) } finally { c.release() } }
