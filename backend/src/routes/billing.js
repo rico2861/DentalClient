@@ -1,5 +1,5 @@
 import { payPlan, payProblem, lockedDoctor } from '../lib/billing-core.js'
-import { pipe, invoicePdf, receiptPdf, payslipPdf } from '../lib/pdf.js'
+import { pipe, invoicePdf, receiptPdf, receiptThermalPdf, payslipPdf } from '../lib/pdf.js'
 import { makePdf, header as pdfHeader, table as pdfTable, num as pdfNum, fd as pdfFd } from '../lib/dossier-pdf.js'
 const NUM = /^\d{1,10}(\.\d{1,4})?$/, c100 = v => Math.round(Number(v) * 100)
 export default function (app, { pool, q, need, audit, fail, wrap, clean }) {
@@ -101,7 +101,16 @@ export default function (app, { pool, q, need, audit, fail, wrap, clean }) {
     const pay = (await q('select * from payments where id=$1 and clinic_id=$2', [req.params.id, req.user.clinic_id])).rows[0]; if (!pay) return fail(res, 404, 'Introuvable')
     const inv = (await q('select * from invoices where id=$1', [pay.invoice_id])).rows[0], pat = (await q('select * from patients where id=$1', [inv.patient_id])).rows[0]
     const [cl, paid] = await Promise.all([clinic(req.user.clinic_id), q('select coalesce(sum(applied_amount),0) s from payments where invoice_id=$1 and voided_at is null', [inv.id])])
-    pipe(res, pay.receipt_number, d => receiptPdf(d, { clinic: cl, pay, inv, patient: pat, paid: Number(paid.rows[0].s) })) }))
+    const data = { clinic: cl, pay, inv, patient: pat, paid: Number(paid.rows[0].s) }
+    // Format TICKET pour imprimante thermique (rouleau 58/80 mm) via ?format=thermal[&w=58|80]
+    if (req.query.format === 'thermal' || req.query.thermal === '1') {
+      const w58 = String(req.query.w) === '58'
+      const width = w58 ? 164.41 : 226.77   // 58 mm / 80 mm en points PDF
+      const rows = 3 + 1 + (pat?.file_number ? 1 : 0) + (pat?.phone ? 1 : 0) + 1 + (pay.currency !== inv.currency ? 1 : 0) + (paid != null ? 2 : 0) + (pay.voided_at ? 2 : 0)
+      const height = 195 + (cl?.address ? 11 : 0) + (cl?.phone ? 11 : 0) + rows * 11
+      return pipe(res, pay.receipt_number, d => receiptThermalPdf(d, data), { size: [width, Math.max(260, height)], margin: 10 })
+    }
+    pipe(res, pay.receipt_number, d => receiptPdf(d, data)) }))
 
   // ── Facture verrouillée : détail, correction autorisée (motif obligatoire, versions conservées), historique ──
   const snap = async (c, id) => { const i = (await c.query("select i.number,i.kind,i.status,i.currency,i.subtotal::float8 subtotal,i.discount::float8 discount,i.total::float8 total,i.doctor_id,u.first_name||' '||u.last_name doctor from invoices i left join users u on u.id=i.doctor_id where i.id=$1", [id])).rows[0]

@@ -8,10 +8,47 @@ const fday = d => typeof d === 'string' ? d.slice(0, 10).split('-').reverse().jo
 const C = { brand: '#1d6fd8', dark: '#0f1b33', text: '#1b2430', muted: '#6b7788', line: '#e3e8ef', soft: '#f3f6fb', ok: '#12804a', warn: '#c27a0e', err: '#d93a3a' }
 const L = 48, R = 547, W = R - L, BOTTOM = 780
 
-export function pipe(res, name, build) {
-  const doc = new PDFDocument({ size: 'A4', margin: 48, bufferPages: true, info: { Title: name } })
+export function pipe(res, name, build, opts = {}) {
+  const doc = new PDFDocument({ size: opts.size || 'A4', margin: opts.margin ?? 48, bufferPages: true, info: { Title: name } })
   res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Content-Disposition', `inline; filename="${name}.pdf"`)
   doc.pipe(res); build(doc); doc.end()
+}
+
+// Reçu format TICKET pour imprimante thermique (rouleau 58 ou 80 mm) : colonne unique, compact.
+export const receiptThermalPdf = (doc, { clinic, pay, inv, patient, paid }) => {
+  const voided = !!pay.voided_at
+  const pad = doc.page.margins.left, W = doc.page.width - pad * 2, X = pad
+  const ctr = (t, f, s, c = '#000') => doc.font(f).fontSize(s).fillColor(c).text(t, X, doc.y, { width: W, align: 'center' })
+  const div = () => { doc.moveDown(.25); const y = doc.y; doc.moveTo(X, y).lineTo(X + W, y).dash(1, { space: 2 }).strokeColor('#999').lineWidth(.5).stroke().undash(); doc.moveDown(.25) }
+  const row = (l, v, b = false) => { const y = doc.y
+    doc.font('Helvetica').fontSize(8).fillColor('#444').text(l, X, y, { width: W * 0.5 })
+    doc.font(b ? 'Helvetica-Bold' : 'Helvetica').fontSize(8).fillColor('#000').text(String(v), X + W * 0.5, y, { width: W * 0.5, align: 'right' })
+    doc.y = Math.max(doc.y, y + 11) }
+  ctr(clinic?.name || 'Clinique', 'Helvetica-Bold', 11)
+  if (clinic?.address) ctr(clinic.address, 'Helvetica', 7, '#555')
+  if (clinic?.phone) ctr('Tél. ' + clinic.phone, 'Helvetica', 7, '#555')
+  doc.moveDown(.25)
+  ctr(voided ? 'REÇU — ANNULÉ' : 'REÇU DE PAIEMENT', 'Helvetica-Bold', 9, voided ? C.err : C.brand)
+  div()
+  row('N° reçu', pay.receipt_number, true); row('Date', fd(pay.created_at)); row('Facture', inv.number)
+  div()
+  row('Patient', who(patient))
+  if (patient?.file_number) row('Dossier', patient.file_number)
+  if (patient?.phone) row('Tél.', patient.phone)
+  div()
+  doc.moveDown(.15)
+  ctr('MONTANT REÇU', 'Helvetica-Bold', 7, '#555')
+  ctr(m(pay.amount, pay.currency), 'Helvetica-Bold', 15, voided ? C.err : '#000')
+  ctr('Mode : ' + sp(pay.method).replace(/^./, c => c.toUpperCase()), 'Helvetica', 8, '#555')
+  div()
+  row('Total facture', m(inv.total, inv.currency))
+  if (pay.currency !== inv.currency) row('Imputé', m(pay.applied_amount, inv.currency))
+  if (paid != null) { row('Payé à ce jour', m(paid, inv.currency)); row('Solde restant', m(Math.max(0, Number(inv.total) - paid), inv.currency), true) }
+  if (voided) { row('Annulé le', fd(pay.voided_at), true); if (pay.void_reason) row('Motif', pay.void_reason) }
+  div()
+  doc.moveDown(.15)
+  ctr('Merci de votre confiance.', 'Helvetica', 8, '#555')
+  ctr('À conserver comme preuve de paiement.', 'Helvetica', 7, '#888')
 }
 
 // ── Éléments de mise en page ──
