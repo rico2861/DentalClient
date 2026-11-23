@@ -1150,6 +1150,16 @@ a.qpi{text-decoration:none}.qpi.cons{border-color:#cfe9dd;background:#f6fcf9}.qp
 .rcst{padding:10px 12px;border-radius:10px;font-size:13.5px;margin:0 0 10px}.rcst.ok{background:#e9f7ef;color:#166534}.rcst.warn{background:#fff6e0;color:#8a5a00}.rcst.ko{background:#fdecec;color:#9b2c2c}
 .rcg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}.rcg code{display:block;text-align:center;padding:10px;border:1px dashed #c9d4e3;border-radius:10px;font-size:16px;font-weight:700;letter-spacing:.06em;background:#fbfcfe}
 
+/* Identité de la clinique (branding) */
+.brandrow{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start}
+.brandlogo{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.brandlogo-box{width:100%;height:120px;border:1.5px dashed #c9d4e3;border-radius:12px;background:#fbfcfe;display:grid;place-items:center;overflow:hidden}
+.brandlogo-box img{max-width:100%;max-height:100%;object-fit:contain}
+.brandlogo-empty{display:flex;flex-direction:column;align-items:center;gap:4px;color:#8a97a8;font-size:12px}
+.brandlogo .bs{justify-content:center}
+.brandfields{margin:0}
+@media(max-width:720px){.brandrow{grid-template-columns:1fr}.brandlogo-box{height:100px}}
+
 
 /* ═══ Pages PUBLIQUES — identité « clinique calme » (teal + menthe + ambre) ═══ */
 .pub{
