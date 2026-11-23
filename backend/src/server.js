@@ -416,7 +416,7 @@ app.use('/api', (req, res) => fail(res, 404, 'Route inconnue'))
 app.use(express.static(config.frontendDir, { etag: true, setHeaders: (res, f) => { if (/.(js|css|html)$/.test(f)) res.setHeader('Cache-Control', 'no-cache') } }))   // l'interface est toujours revérifiée : jamais d'ancienne version affichée
 app.use((err, req, res, next) => { console.error(err); err.status === 413 ? fail(res, 413, 'Fichier trop volumineux (10 Mo maximum)') : fail(res, 500, 'Erreur serveur') })
 { const c = await pool.connect()   // base embarquée : migrations + propriétaire appliqués automatiquement au démarrage
-  try { await migrate(c, () => {}); if (process.env.OWNER_EMAIL && process.env.OWNER_PASSWORD) await ensureOwner(c, process.env.OWNER_EMAIL, process.env.OWNER_PASSWORD, () => {})
+  try { await migrate(c, () => {}); if (!process.env.DATABASE_URL && process.env.OWNER_EMAIL && process.env.OWNER_PASSWORD) await ensureOwner(c, process.env.OWNER_EMAIL, process.env.OWNER_PASSWORD, () => {})   // pas de propriétaire par défaut en instance partagée (hébergé)
     // après la création de la clinique (premier démarrage) : sinon le réglage ne s'appliquerait qu'au démarrage suivant
     if (['true', 'false'].includes(process.env.REQUIRE_2FA)) await c.query('update clinics set require_2fa=$1', [process.env.REQUIRE_2FA === 'true']) } finally { c.release() } }
 // redémarrage du serveur : toutes les sessions sont fermées, chacun doit se reconnecter (KEEP_SESSIONS=true pour garder les connexions)
