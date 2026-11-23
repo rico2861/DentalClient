@@ -91,10 +91,28 @@ const auth = wrap(async (req, res, next) => {
   req.user = u; req.sid = s.id; req.perms = await permsOf(u); req.actor = { id: u.id, n: `${u.first_name} ${u.last_name}`.trim(), ip: req.ip, r: '' }
   actorCtx.run(req.actor, () => next())
 })
-const need = (...ps) => [auth, (req, res, next) => {
+// Vérification d'ABONNEMENT par clinique (instance partagée) : une clinique dont
+// l'abonnement a expiré ou est suspendu est bloquée, même déjà connectée. Le statut
+// vient du SaaS (même base : saas.license_keys), mis en cache 5 min par clinique.
+const SUB_CACHE = new Map()
+async function subscriptionOk(clinicId) {
+  const c = SUB_CACHE.get(clinicId)
+  if (c && c.until > Date.now()) return c.ok
+  let ok = true
+  try {
+    const cl = (await q('select license_key from clinics where id=$1', [clinicId])).rows[0]
+    if (cl && cl.license_key) {
+      ok = (await q("select 1 from saas.license_keys where key=$1 and status='active' and ends_at>now()", [cl.license_key])).rowCount > 0
+    } // clinique sans licence liée (cas limite) → on ne bloque pas
+  } catch { ok = true }   // en cas d'erreur de lecture, ne pas bloquer (éviter un faux positif)
+  SUB_CACHE.set(clinicId, { ok, until: Date.now() + 5 * 60 * 1000 })
+  return ok
+}
+const need = (...ps) => [auth, async (req, res, next) => {
   if (req.user.must_change_password) return fail(res, 403, 'Changement de mot de passe obligatoire', 'PASSWORD_CHANGE_REQUIRED')
   if (adminish(req.user) && req.user.req2fa && !req.user.totp_enabled && !req.user.mfa_email) return fail(res, 403, "Activez l'authentification à deux facteurs", 'TWOFA_SETUP_REQUIRED')
   if (ps.length && !ps.some(p => req.perms.has(p))) return fail(res, 403, 'Permission refusée')
+  if (process.env.DATABASE_URL && !await subscriptionOk(req.user.clinic_id)) return fail(res, 402, "Abonnement expiré ou suspendu. Renouvelez pour rétablir l'accès ; vos données sont conservées.", 'SUBSCRIPTION')
   guard(req, res, next).catch(next) }]
 // ── Protections des modifications sensibles ──
 // motif : texte obligatoire (5 caractères min.), conservé dans l'historique et le journal ;

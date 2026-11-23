@@ -22,7 +22,8 @@
     "service:desinstaller": "node scripts/service.js desinstaller",
     "service:etat": "node scripts/service.js etat",
     "service:demarrer": "node scripts/service.js demarrer",
-    "service:arreter": "node scripts/service.js arreter"
+    "service:arreter": "node scripts/service.js arreter",
+    "test:subscription": "node tests/subscription.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.0",

@@ -29,6 +29,7 @@ async function api(p, body, method, extra = {}) {
   const j = await r.json().catch(() => ({}))
   if (r.status === 428 && (j.code === 'REAUTH_REQUIRED' || j.code === 'REASON_REQUIRED')) { const h = await askGuard(j); if (!h) throw Object.assign(new Error('Modification annulée'), { code: 'CANCELLED', status: 428 }); return api(p, body, method, { ...extra, ...h }) }
   if (!r.ok) { if (r.status === 401 && me) { toLogin(j.error || 'Session terminée : reconnectez-vous') } else if (j.code === 'TWOFA_SETUP_REQUIRED' || j.code === 'PASSWORD_CHANGE_REQUIRED') boot(); if (r.status === 503 && j.code === 'MAINTENANCE') toast(j.error)
+    if (r.status === 402 && j.code === 'SUBSCRIPTION') { const a = document.getElementById('app'); if (a) a.innerHTML = authShell(`<h2>Abonnement expiré</h2><p class="sub">${esc(j.error || '')}</p><button class="abtn" onclick="location.reload()">${ic('lock', 16)}<span>Réessayer</span></button>`) }
     // fonction ajoutée par une mise à jour mais serveur pas encore redémarré
     const msg = r.status === 404 && j.error === 'Route inconnue' ? "Cette fonction vient d'être ajoutée : redémarrez le serveur (Ctrl + C puis npm start) pour l'activer." : j.error || 'Erreur'
     throw Object.assign(new Error(msg), { code: j.code, status: r.status }) }
