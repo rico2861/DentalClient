@@ -1291,3 +1291,114 @@ a.qpi{text-decoration:none}.qpi.cons{border-color:#cfe9dd;background:#f6fcf9}.qp
   .pub-actions .pub-link{display:none}
 }
 @media(prefers-reduced-motion:reduce){.pub *{transition:none!important}}
+
+/* ═══ Vitrine — navigation, pages de contenu, pied enrichi ═══ */
+.pub-brand{background:none;border:0;padding:0;cursor:pointer;font-family:inherit}
+.pub-nav{display:flex;gap:2px;align-items:center}
+.pub-nav button{background:none;border:0;padding:9px 13px;border-radius:9px;font-weight:600;font-size:14px;color:var(--pink-soft);cursor:pointer;font-family:inherit}
+.pub-nav button:hover{background:var(--ptint);color:var(--pbrand-d)}
+.pub-nav button.on{color:var(--pbrand-d)}
+.pub-nav button.on::after{content:"";display:block;height:2px;border-radius:2px;background:var(--paccent);margin:5px 10px -7px}
+
+/* en-tête de page de contenu */
+.pub-phead{text-align:center;padding:46px 0 24px;max-width:760px;margin:0 auto}
+.pub-phead h1{font-size:clamp(30px,4.4vw,48px);line-height:1.08;margin:12px 0 10px}
+.pub-lead.center{margin-left:auto;margin-right:auto;text-align:center}
+
+/* « pourquoi » */
+.pub-why{margin:60px 0 10px}
+.pub-why-head{max-width:620px;margin-bottom:28px}
+.pub-why-head h2{font-size:clamp(24px,3vw,34px);margin:0 0 8px}
+.pub-why-head p{color:var(--pink-soft);font-size:16.5px;margin:0}
+.pub-why-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.pub-why-card{background:var(--psurf);border:1px solid var(--pline);border-radius:18px;padding:26px}
+.pub-why-ic{width:46px;height:46px;border-radius:12px;background:var(--ptint);color:var(--pbrand);display:grid;place-items:center;margin-bottom:14px}
+.pub-why-card h3{font-family:'Inter',sans-serif;font-size:17.5px;margin:0 0 6px;color:var(--pink)}
+.pub-why-card p{margin:0;color:var(--pink-soft);font-size:14.5px}
+
+/* bandeau d'appel à l'action */
+.pub-cta-band{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--pbrand),var(--pbrand-d));color:#fff;border-radius:22px;padding:34px 38px;margin:56px 0 10px}
+.pub-cta-band h2{color:#fff;font-size:clamp(22px,2.6vw,30px);margin:0 0 6px}
+.pub-cta-band p{margin:0;color:#d6ece8;font-size:16px}
+.pub-cta-band-btns{display:flex;gap:12px;flex-wrap:wrap}
+.pub-cta-band .pub-cta{background:#fff;color:var(--pbrand-d);box-shadow:0 2px 0 #cfe3df}
+.pub-cta-band .pub-cta:hover{background:#eefaf7}
+.pub-ghost.oninv{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
+.pub-ghost.oninv:hover{background:rgba(255,255,255,.12);border-color:#fff}
+
+/* fonctionnalités détaillées */
+.pub-featx{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
+.pub-featx-card{background:var(--psurf);border:1px solid var(--pline);border-radius:18px;padding:24px}
+.pub-featx-card h3{font-family:'Inter',sans-serif;font-size:17px;margin:0 0 4px;color:var(--pink)}
+.pub-featx-sub{color:var(--pbrand-d);font-weight:600;font-size:13.5px;margin:0 0 12px}
+.pub-featx-card ul{margin:0;padding:0;list-style:none}
+.pub-featx-card li{position:relative;padding:5px 0 5px 22px;color:var(--pink-soft);font-size:14px}
+.pub-featx-card li::before{content:"";position:absolute;left:3px;top:11px;width:8px;height:8px;border-radius:2px;background:var(--ptint);border:1.5px solid var(--pbrand)}
+
+/* tarifs */
+.pub-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:8px 0 22px}
+.pub-price{background:var(--psurf);border:1px solid var(--pline);border-radius:20px;padding:28px 24px;display:flex;flex-direction:column}
+.pub-price.feat{border:2px solid var(--paccent);box-shadow:0 20px 50px -34px rgba(207,109,38,.6)}
+.pub-price .pp-tag{align-self:flex-start;background:var(--ptint);color:var(--pbrand-d);font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:20px;margin-bottom:12px}
+.pub-price.feat .pp-tag{background:var(--paccent);color:#fff}
+.pub-price h3{font-family:'Inter',sans-serif;font-size:16px;color:var(--pmut);margin:0 0 6px;font-weight:600}
+.pp-amount{font-family:'Fraunces',serif;font-size:32px;font-weight:600;color:var(--pink);line-height:1}
+.pp-amount small{font-family:'Inter',sans-serif;font-size:14px;font-weight:500;color:var(--pmut)}
+.pp-note{color:var(--pink-soft);font-size:13.5px;margin:10px 0 16px}
+.pp-list{list-style:none;margin:0 0 20px;padding:16px 0 0;border-top:1px solid var(--pline);display:grid;gap:8px}
+.pp-list li{position:relative;padding-left:24px;font-size:13.5px;color:var(--pink-soft)}
+.pp-list li::before{content:"✓";position:absolute;left:2px;color:var(--pbrand);font-weight:700}
+.pub-price .pub-cta{margin-top:auto}
+.pub-cta.alt{background:var(--psurf);color:var(--pbrand-d);border:1.5px solid var(--pbrand);box-shadow:none}
+.pub-cta.alt:hover{background:var(--ptint)}
+
+/* faq */
+.pub-faq{max-width:780px;margin:0 auto;display:grid;gap:12px}
+.pub-faq-item{background:var(--psurf);border:1px solid var(--pline);border-radius:14px;overflow:hidden}
+.pub-faq-item summary{list-style:none;cursor:pointer;padding:18px 22px;font-weight:600;font-size:15.5px;color:var(--pink);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pub-faq-item summary::-webkit-details-marker{display:none}
+.pub-faq-item summary::after{content:"+";font-size:22px;color:var(--pbrand);font-weight:400;flex:none;transition:transform .2s}
+.pub-faq-item[open] summary::after{transform:rotate(45deg)}
+.pub-faq-a{padding:0 22px 20px;color:var(--pink-soft);font-size:14.5px;line-height:1.6}
+.pub-faq-a b{color:var(--pink)}
+
+/* à propos */
+.pub-about{max-width:860px;margin:0 auto}
+.pub-about-lead{font-size:19px;line-height:1.6;color:var(--pink);margin:0 0 32px;text-align:center}
+.pub-about-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.pub-about-grid h3{font-family:'Fraunces',serif;font-size:20px;margin:0 0 6px;color:var(--pbrand-d)}
+.pub-about-grid p{margin:0;color:var(--pink-soft);font-size:15px}
+
+/* contact */
+.pub-contact{display:grid;grid-template-columns:.9fr 1.1fr;gap:28px;align-items:start;max-width:960px;margin:0 auto}
+.pub-contact-info{display:grid;gap:12px}
+.pub-contact-row{display:flex;gap:14px;align-items:center;background:var(--psurf);border:1px solid var(--pline);border-radius:14px;padding:16px 18px;text-decoration:none;color:inherit}
+a.pub-contact-row:hover{border-color:var(--pbrand)}
+.ci-ic{width:42px;height:42px;border-radius:11px;background:var(--ptint);color:var(--pbrand);display:grid;place-items:center;flex:none}
+.pub-contact-row h4{margin:0 0 2px;font-size:13px;color:var(--pmut);font-weight:600;text-transform:none;letter-spacing:normal}
+.pub-contact-row p{margin:0;font-size:15.5px;font-weight:600;color:var(--pink)}
+.pub-contact-form{background:var(--psurf);border:1px solid var(--pline);border-radius:20px;padding:26px;box-shadow:0 24px 60px -40px rgba(10,86,76,.4)}
+.pub-contact-form textarea{width:100%;box-sizing:border-box;padding:12px 13px;border:1.5px solid var(--pline);border-radius:11px;font-size:14.5px;font-family:inherit;color:var(--pink);resize:vertical}
+.pub-contact-form textarea:focus{outline:0;border-color:var(--pbrand);box-shadow:0 0 0 3px var(--ptint)}
+
+/* pied enrichi */
+.pub-foot{text-align:left;padding:48px 26px 28px}
+.pub-foot-grid{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1.6fr 1fr 1fr 1.2fr;gap:28px;padding-bottom:28px;border-bottom:1px solid var(--pline)}
+.pub-foot-brand p{color:var(--pmut);font-size:13.5px;margin:12px 0 0;max-width:30ch}
+.pub-brand.sm{font-size:17px}.pub-brand.sm .pub-logo{width:30px;height:30px;font-size:17px}
+.pub-foot h5{font-size:13px;color:var(--pink);margin:0 0 12px;font-weight:600}
+.pub-foot nav{display:flex;flex-direction:column;gap:9px;align-items:flex-start}
+.pub-foot nav button{background:none;border:0;padding:0;color:var(--pmut);font-size:13.5px;cursor:pointer;font-family:inherit}
+.pub-foot nav button:hover{color:var(--pbrand-d)}
+.pub-foot>div a,.pub-foot>div span{display:block;color:var(--pmut);font-size:13.5px;text-decoration:none;margin-bottom:9px}
+.pub-foot>div a:hover{color:var(--pbrand-d)}
+.pub-foot-base{max-width:1120px;margin:0 auto;padding-top:20px;color:var(--pmut);font-size:12.5px}
+
+@media(max-width:900px){
+  .pub-nav{display:none}
+  .pub-why-grid,.pub-featx,.pub-prices,.pub-about-grid,.pub-contact,.pub-foot-grid{grid-template-columns:1fr}
+  .pub-featx,.pub-prices{gap:14px}
+  .pub-foot-grid{gap:22px}
+  .pub-cta-band{padding:26px 24px}
+}
