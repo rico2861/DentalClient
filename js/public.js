@@ -13,6 +13,8 @@ const token = () => { try { return localStorage.getItem(TK) || '' } catch { retu
 const setToken = t => { try { localStorage.setItem(TK, t) } catch {} }
 const clearToken = () => { try { localStorage.removeItem(TK) } catch {} }
 const APP_URL = location.origin   // le logiciel est servi à la même origine
+const infoIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a564c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.3" r=".7" fill="#0a564c" stroke="none"/></svg>'
+const toothIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#107a6d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5c1.6-1.3 3.4-1.2 5 .2.5.4 1.4.4 1.9 0 1.7-1.4 3.5-1.5 5.1-.2 1.6 1.4 1.7 3.6 1.1 6.3-.5 2.3-.6 3.2-1 5.1-.4 1.9-.8 3.6-1.9 3.6-1.3 0-1.4-2.6-2.4-4.3-.4-.7-1.6-.7-2 0-1 1.7-1.1 4.3-2.4 4.3-1.1 0-1.5-1.7-1.9-3.6-.4-1.9-.5-2.8-1-5.1-.6-2.7-.5-4.9 1.1-6.3Z"/></svg>'
 
 async function sapi(path, { body, auth, method } = {}) {
   const h = { 'Content-Type': 'application/json' }
@@ -42,18 +44,31 @@ const FEATURES = [
 ]
 
 function landing() {
+  const appt = (t, who, what, pill, cls = '') => `<div class="pub-appt"><time>${t}</time><span class="tooth">${toothIcon}</span><div><div class="who">${who}</div><div class="what">${what}</div></div><span class="pill ${cls}">${pill}</span></div>`
   app().innerHTML = shell(`
     <section class="pub-hero">
-      <span class="pub-eyebrow">Logiciel de cabinet dentaire — 100 % en ligne</span>
-      <h1>Tout votre cabinet,<br><b>dans un seul logiciel.</b></h1>
-      <p class="pub-lead">Patients, rendez-vous, facturation, caisse, stock, paie et rapports. En ligne, sécurisé, et vos données isolées pour chaque clinique.</p>
-      <div class="pub-hero-btns"><button class="pub-cta lg" data-pub="create">Créer un compte</button><button class="pub-ghost lg" data-pub="signin">Se connecter</button></div>
+      <div class="pub-hero-copy">
+        <span class="pub-eyebrow">Logiciel de cabinet dentaire · 100 % en ligne</span>
+        <h1>Gérez tout votre cabinet, <b>d'un seul endroit.</b></h1>
+        <p class="pub-lead">Patients, rendez-vous, facturation, caisse, stock, paie et rapports — en ligne et sécurisé. Les données de chaque clinique restent isolées, visibles par elle seule.</p>
+        <div class="pub-hero-btns"><button class="pub-cta lg" data-pub="create">Créer un compte</button><button class="pub-ghost lg" data-pub="signin">Se connecter</button></div>
+        <div class="pub-trust"><span>Essai gratuit 15 jours</span><span>Sans carte bancaire</span><span>MonCash & virement</span></div>
+      </div>
+      <aside class="pub-glance" aria-hidden="true">
+        <div class="pub-glance-top"><b><span class="pub-glance-dot"></span>Aujourd'hui</b><small>6 rendez-vous</small></div>
+        ${appt('08:30', 'Marie L.', 'Détartrage', 'Terminé')}
+        ${appt('09:15', 'Jean P.', 'Contrôle + radio', 'En salle', 'wait')}
+        ${appt('10:00', 'Rose D.', 'Extraction', 'À venir')}
+        ${appt('11:00', 'Carl B.', 'Pose couronne', 'À venir')}
+      </aside>
     </section>
+    <p class="pub-sec-label">Tout ce dont le cabinet a besoin</p>
     <section class="pub-feats">${FEATURES.map(([t, d]) => `<div class="pub-feat"><h3>${esc(t)}</h3><p>${esc(d)}</p></div>`).join('')}</section>
-    <section class="pub-how"><h2>Comment ça marche</h2><ol class="pub-steps">
-      <li><b>Créez votre compte</b> et choisissez une formule (essai 15 jours, 1 mois ou 1 an).</li>
-      <li><b>Payez</b> par MonCash ou virement bancaire — votre licence est émise dès confirmation.</li>
-      <li><b>Créez votre super-admin</b> depuis votre espace, puis connectez-vous au logiciel avec votre clé + un code reçu par e-mail.</li>
+    <p class="pub-sec-label">Comment démarrer</p>
+    <section class="pub-how"><ol class="pub-steps">
+      <li class="pub-step"><b>Créez votre compte</b><p>Inscrivez votre cabinet et choisissez une formule. L'essai de 15 jours est gratuit, sans carte.</p></li>
+      <li class="pub-step"><b>Activez votre licence</b><p>L'essai s'active aussitôt. Pour un abonnement payant, réglez par MonCash ou virement : la licence s'émet dès confirmation.</p></li>
+      <li class="pub-step"><b>Ouvrez le logiciel</b><p>Créez votre super-admin, puis connectez-vous avec votre clé de licence et un code reçu par e-mail.</p></li>
     </ol></section>`)
 }
 
@@ -62,6 +77,7 @@ function auth(view = 'register') {
   app().innerHTML = shell(`<section class="pub-card"><div class="pub-tabs">
       <button class="${view === 'register' ? 'on' : ''}" data-pub="t-register">Créer un compte</button>
       <button class="${view === 'login' ? 'on' : ''}" data-pub="t-login">J'ai déjà un compte</button></div>
+    <div class="pub-note"><span class="ic">${infoIcon}</span><div>Ce compte gère votre <b>abonnement</b> (formules, paiements, licence). L'accès au logiciel de la clinique vient ensuite, avec votre clé de licence.</div></div>
     <div class="err" id="a-err" style="display:none"></div>
     ${view === 'register' ? `
       <div class="fld"><label>Nom du cabinet</label><input id="a-name" placeholder="Cabinet Dentaire…"></div>
@@ -90,25 +106,32 @@ async function portal(preselect) {
   try { me = await sapi('/api/account/me', { auth: true }) } catch (e) { if (e.status === 401) { clearToken(); return auth('login') } return app().innerHTML = shell(`<section class="pub-card"><div class="err" style="display:block">${esc(e.message)}</div></section>`) }
   const prices = await sapi('/api/prices').catch(() => ({}))
   const lic = (me.licenses || []).find(l => l.status === 'active')
-  const licHtml = (me.licenses || []).length ? (me.licenses || []).map(l => `<div class="pub-lic"><div><span>${planLabel(l.plan)}</span><code>${esc(l.key)}</code></div><span class="badge ${l.status === 'active' ? 'ok' : 'bad'}">${l.status === 'active' ? 'Active' : 'Expirée'}</span><small>échéance ${fdate(l.ends_at)}</small></div>`).join('') : `<p class="muted">Aucune licence pour le moment. Choisissez une formule ci-dessous.</p>`
-  const plans = [['trial', 'Essai gratuit', '15 jours'], ['1m', '1 mois', money(prices.PRICE_1M || 1500)], ['1y', '1 an', money(prices.PRICE_1Y || 15000)]]
-    .filter(p => p[0] !== 'trial' || !me.trial_used)
+  const licHtml = (me.licenses || []).length ? (me.licenses || []).map(l => `<div class="pub-lic"><div><span>${planLabel(l.plan)}</span><code>${esc(l.key)}</code></div><span class="badge ${l.status === 'active' ? 'ok' : 'bad'}">${l.status === 'active' ? 'Active' : 'Expirée'}</span><small>échéance ${fdate(l.ends_at)}</small></div>`).join('') : ''
+  const paid = [['1m', '1 mois', money(prices.PRICE_1M || 1500)], ['1y', '1 an', money(prices.PRICE_1Y || 15000)]]
+  const trialBanner = (!lic && !me.trial_used) ? `<div class="pub-trial">
+      <span class="tg">Recommandé pour commencer</span>
+      <h4>Essai gratuit — 15 jours</h4>
+      <p>Toutes les fonctionnalités, sans carte bancaire. Votre licence est émise immédiatement.</p>
+      <button class="pub-cta" data-plan="trial">Démarrer l'essai gratuit</button></div>` : ''
   app().innerHTML = shell(`<section class="pub-card">
     <div class="pub-head"><div><h2>${esc(me.clinic?.name || 'Mon cabinet')}</h2><p class="muted">${esc(me.clinic?.email || '')}</p></div><button class="pub-link" data-pub="logout">Déconnexion</button></div>
+    <div class="pub-note"><span class="ic">${infoIcon}</span><div>Ici vous gérez votre <b>abonnement</b>. Pour entrer dans le logiciel : activez une licence, créez votre super-admin, puis connectez-vous à l'onglet <b>Propriétaire</b>.</div></div>
     <div class="err" id="p-err" style="display:none"></div>
-    <h3 class="pub-ttl">Mes licences</h3>${licHtml}
-    <h3 class="pub-ttl">Choisir une formule</h3>
-    <div class="pub-plans">${plans.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span>${p[2]}</span></button>`).join('')}</div>
+    <h3 class="pub-ttl">Mes licences</h3>
+    ${licHtml || '<p class="muted">Aucune licence active pour le moment.</p>'}
+    ${trialBanner}
+    ${!lic ? `<h3 class="pub-ttl">${me.trial_used ? 'Choisir une formule' : 'Ou passez directement à un abonnement'}</h3>
+      <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div>` : ''}
     ${lic ? superAdminCard(me) : ''}
     </section>`)
-  document.querySelectorAll('.pub-plan').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
+  document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
   wireSuperAdmin(me)
   if (preselect) choosePlan(preselect)
 }
 
 function superAdminCard(me) {
-  return `<h3 class="pub-ttl">Mon compte super-admin</h3>
-    <div class="pub-sa"><p class="muted">Créez le compte <b>propriétaire</b> de votre clinique. Vous vous connecterez ensuite au logiciel avec votre <b>clé de licence</b> et un <b>code reçu par e-mail</b>.</p>
+  return `<h3 class="pub-ttl">Ouvrir le logiciel</h3>
+    <div class="pub-sa"><p class="muted">Créez le compte <b>propriétaire</b> (super-admin) de votre clinique. Vous vous connecterez ensuite au logiciel via l'onglet <b>Propriétaire</b>, avec votre <b>clé de licence</b> et un <b>code envoyé par e-mail</b>.</p>
       <div class="err" id="sa-err" style="display:none"></div>
       <div class="fld"><label>E-mail du super-admin</label><input id="sa-email" type="email" value="${esc(me.clinic?.email || '')}"></div>
       <div class="fld2"><div class="fld"><label>Mot de passe</label><input id="sa-pw" type="password" placeholder="12 caractères min."></div><div class="fld"><label>Confirmer</label><input id="sa-pw2" type="password"></div></div>
@@ -124,10 +147,12 @@ function wireSuperAdmin(me) {
     g.disabled = true
     try {
       const r = await sapi('/api/account/provision-admin', { auth: true, body: { email, password: pw } })
-      app().innerHTML = shell(`<section class="pub-card"><h2>Super-admin ${r.created ? 'créé' : 'déjà actif'}</h2>
-        <p class="muted">Connectez-vous au logiciel avec votre <b>clé de licence</b> et le <b>code reçu par e-mail</b> (${esc(email)}).</p>
+      app().innerHTML = shell(`<section class="pub-card">
+        <div class="pub-ok"><div class="mark">✓</div><h2>Super-admin ${r.created ? 'créé' : 'déjà actif'}</h2></div>
+        <p class="muted center">Dernière étape pour entrer dans le logiciel.</p>
+        <div class="pub-note"><span class="ic">${infoIcon}</span><div>Cliquez sur <b>Ouvrir le logiciel</b>, choisissez l'onglet <b>Propriétaire</b>, saisissez la clé ci-dessous, puis le <b>code</b> envoyé à ${esc(email)}.</div></div>
         <div class="fld"><label>Votre clé de licence</label><code class="pub-key">${esc(r.license_key)}</code></div>
-        <button class="pub-cta wfull" data-pub="signin">Ouvrir le logiciel</button></section>`)
+        <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></section>`)
     } catch (e) { g.disabled = false; showErr('sa-err', e.message) }
   }
 }
