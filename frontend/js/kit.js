@@ -15,6 +15,25 @@ export const btn = (a, label, icon, cls = '', extra = '') => `<button type="butt
 // Petit bouton d'action dans un tableau (icône + texte, pas d'infobulle)
 export const bs = (a, id, label, icon, cls = '', extra = '') => `<button type="button" class="bs ${cls}" data-a="${a}" data-id="${id}" ${extra}>${icon ? ic(icon, 15) : ''}${label}</button>`
 export const bsLink = (href, label, icon = 'file') => `<a class="bs" href="${href}" target="_blank" rel="noopener">${ic(icon, 15)}${label}</a>`
+// Bouton d'IMPRESSION : ouvre le document (PDF) dans un cadre caché et lance l'impression.
+// Repli automatique sur un nouvel onglet si l'impression directe échoue (certains navigateurs).
+export const bsPrint = (href, label = 'Imprimer', icon = 'printer') => `<button type="button" class="bs" data-print="${href}">${ic(icon, 15)}${label}</button>`
+export const printDoc = href => {
+  const f = document.createElement('iframe')
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0'
+  f.src = href
+  let done = false
+  const fallback = () => { if (!done) { done = true; window.open(href, '_blank', 'noopener'); f.remove() } }
+  f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); done = true; setTimeout(() => f.remove(), 60000) } catch { fallback() } }
+  f.onerror = fallback
+  setTimeout(() => { if (!done) fallback() }, 8000)   // sécurité : si onload ne vient jamais
+  document.body.appendChild(f)
+}
+// Tout bouton/lien portant data-print="<url>" lance l'impression (branché une seule fois).
+if (typeof document !== 'undefined') document.addEventListener('click', e => {
+  const el = e.target.closest && e.target.closest('[data-print]')
+  if (el) { e.preventDefault(); printDoc(el.getAttribute('data-print')) }
+})
 
 // Cartes indicateurs (même style que le tableau de bord)
 const G = { blue: 'linear-gradient(135deg,#1d6fd8,#0a4fb0)', teal: 'linear-gradient(135deg,#16a394,#0b7a6f)', violet: 'linear-gradient(135deg,#7c5cf0,#5a3fd1)', green: 'linear-gradient(135deg,#12a36a,#0b7c4f)', red: 'linear-gradient(135deg,#e5484d,#b9303a)', orange: 'linear-gradient(135deg,#f5a524,#d9780a)', slate: 'linear-gradient(135deg,#4a5a78,#2c3a55)' }

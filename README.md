@@ -1,3 +1,6 @@
+> ℹ️ **Déploiement** : la copie déployée (service unique Render) vit dans `BackendDental/clinic/`.
+> Les deux sont tenues synchronisées ; privilégier `BackendDental/clinic/` comme référence pour le déploiement.
+
 # DENTAL — Édition Web (DentalClient)
 
 Version **web** du logiciel de gestion de cabinet dentaire DENTAL : même application,
