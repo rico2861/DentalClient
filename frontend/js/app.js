@@ -154,6 +154,8 @@ const allowed = n => (n[0] === 'backups' && window.DL_HOSTED) ? false : (n[2] ==
 // déconnexion (bouton, inactivité, session expirée) : adresse #connexion et rechargement complet (aucun état de la session précédente ne reste)
 function toLogin(msg) { try { if (msg) sessionStorage.setItem('dl_msg', msg) } catch {} me = null; challenge = null; history.replaceState(null, '', location.pathname + '#connexion'); location.reload() }
 async function boot() { try { me = await api('/me') } catch { me = null } render() }
+// Appelé par la page publique (« Se connecter ») pour basculer vers le login clinique.
+window.DL_showClinicLogin = () => { history.replaceState(null, '', location.pathname + '#connexion'); render() }
 const GROUPS = [['Principal', ['dashboard', 'myact', 'mypay', 'patients', 'appts', 'queue']], ['Soins', ['plans', 'pros', 'tariffs']], ['Finances', ['finance', 'billing', 'cash', 'team']], ['Gestion', ['stock', 'reports']], ['Administration', ['users', 'intel', 'backups', 'audit']]]
 // entrées regroupant plusieurs pages (onglets en haut de page) : chaque onglet n'apparaît qu'aux rôles autorisés
 const TABS = { patients: [['patients', 'Liste des patients'], ['record', 'Dossiers médicaux']], appts: [['appts', 'Agenda du jour'], ['cal', 'Calendrier du mois']], billing: [['billing', 'Factures'], ['debts', 'Dettes patients'], ['rates', 'Taux de change']], team: [['hr', 'Paie & salaires'], ['perf', 'Médecins & commissions']], stock: [['stock', 'Stock'], ['requests', 'Demandes d\'achat']], audit: [['audit', 'Journal d\'activité'], ['changes', 'Modifications de données']] }
@@ -184,7 +186,11 @@ function layoutHtml(nv, h) {
 function render() {
   const app = $('#app')
   if (!me && /^#reinitialiser\/[\w-]{30,80}$/.test(location.hash)) return resetView(location.hash.split('/')[1])
-  if (!me && location.hash !== '#connexion') history.replaceState(null, '', location.pathname + '#connexion')
+  // Non connecté : page publique (accueil, inscription, paiement) par défaut ; #connexion → login clinique.
+  if (!me && location.hash !== '#connexion' && !challenge && !ownerChallenge) {
+    import('./public.js').then(m => m.mountPublic(location.hash === '#inscription' ? 'account' : 'landing')).catch(() => {})
+    return
+  }
   if (me && (location.hash === '#connexion' || location.hash === '')) history.replaceState(null, '', location.pathname + '#tableau-de-bord')
   if (!me && challenge) { const m = otpInfo?.methods || { app: true }, em = otpInfo?.email
     return app.innerHTML = authShell(`<h2>Vérification en deux étapes</h2>${em?.sent ? `<div class="otpok">${ic('check', 16)} ${em.recent ? 'Un code vous a déjà été envoyé il y a quelques secondes' : 'Un code à 6 chiffres vient d’être envoyé'} à <b>${esc(em.to)}</b>. Il est valable 10 minutes.</div>` : em ? `<div class="otpwarn">${ic('alert', 16)} <span><b>L'e-mail n'a pas pu être envoyé</b> (${esc(em.reason)}).</span></div>` : ''}
