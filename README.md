@@ -1,34 +1,18 @@
-> ℹ️ **Déploiement** : la copie déployée (service unique Render) vit dans `BackendDental/clinic/`.
-> Les deux sont tenues synchronisées ; privilégier `BackendDental/clinic/` comme référence pour le déploiement.
+# DentalClient — Frontend web (Dental Assist)
 
-# DENTAL — Édition Web (DentalClient)
+Frontend **seul** de l'application clinique Dental Assist. Déployé sur **Vercel**.
+Le backend n'est **pas** dans ce dépôt : il vit dans **rico2861/BackendDental** (Render).
 
-Version **web** du logiciel de gestion de cabinet dentaire DENTAL : même application,
-mêmes fonctions, accessible **par Internet** depuis un navigateur. L'app installée
-(dépôt `Dental`) et cette édition web partagent le même code.
+## Fonctionnement
+- Les fichiers statiques (`index.html`, `js/`, `css/`) sont servis par Vercel.
+- `vercel.json` **proxie** les appels API vers BackendDental, pour que tout soit
+  en **même origine** côté navigateur (les cookies de session fonctionnent) :
+  - `/api/*`  → logiciel clinique (BackendDental)
+  - `/saas/*` → cerveau SaaS (licences, paiements, provisioning)
 
-## Connexion
-Accès protégé par **licence + code OTP** :
-1. Ouvrez l'URL du service → saisissez votre **clé de licence**.
-2. Un **code à 6 chiffres** est envoyé à l'e-mail de votre inscription (valable 10 min).
-3. Saisissez le code → accès. Ensuite, connexion habituelle des utilisateurs du cabinet.
+## À configurer
+Dans `vercel.json`, remplace `https://backenddental.onrender.com` par l'URL réelle
+de ton service **BackendDental** sur Render (les deux lignes).
 
-## Sécurité & isolation des données
-- Toutes les routes exigent une **authentification** et des **permissions** (rôles).
-- Chaque requête est **cantonnée à la clinique** de l'utilisateur connecté (`clinic_id`) ;
-  un utilisateur ne voit que les données auxquelles ses droits donnent accès
-  (ex. patients assignés, finances, etc.).
-- Données **chiffrées** (AES-256) ; journal d'audit ; double authentification possible.
-
-## Impression (reçus & factures)
-- **Facture PDF** : bouton « PDF » dans Finances → s'ouvre dans le navigateur, prêt à imprimer.
-- **Reçu de paiement PDF** : bouton « Reçus » → impression via le navigateur (toute imprimante).
-
-## Déploiement (Render + Docker)
-1. Render → New + → **Blueprint** → connectez ce dépôt (lit `render.yaml`).
-2. Renseignez `SAAS_URL` (= URL du backend SaaS BackendDental) et `OWNER_PASSWORD`.
-3. `JWT_SECRET` est généré et stable ; les données persistent sur le volume `/data`.
-
-> Édition **mono-clinique** par déploiement (sous-étape 1). Le mode **multi-cliniques
-> partagé** (une instance pour plusieurs cabinets, isolation par `clinic_id`) est la
-> sous-étape suivante.
+Visiteur → page d'accueil publique (présentation, créer un compte, payer) →
+connexion clinique (propriétaire licence+OTP / personnel mot de passe).
