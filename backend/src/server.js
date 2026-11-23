@@ -27,7 +27,7 @@ const audit = (req, action, table, id, details) =>
     [req.user?.clinic_id, req.user?.id, action, table, id, req.motif ? { ...(details && typeof details === 'object' ? details : {}), motif: req.motif } : details ?? null, req.ip])
 
 // ── App ──
-const app = express()
+export const app = express()
 app.set('trust proxy', 1)
 // réseau local en HTTP : pas de redirection forcée vers HTTPS (sinon les autres postes n'affichent qu'une page blanche)
 // en ligne (HTTPS) : navigateur obligé de rester en HTTPS ; en local : HTTP autorisé pour les autres postes du réseau
@@ -406,6 +406,7 @@ if (process.env.KEEP_SESSIONS !== 'true') try { const r = await q('update user_s
 try { for (const u of (await q('select id,first_name,last_name from users where username is null')).rows) await q('update users set username=$2 where id=$1', [u.id, await makeUsername(u.first_name, u.last_name)]) } catch (e) { console.error('Noms d\'utilisateur :', e.message) }
 try { const r = await protectExisting(q, config.storageDir); if (r.rows || r.files) console.log(`Données médicales chiffrées : ${r.rows} enregistrement(s), ${r.files} document(s)`) } catch (e) { console.error('Chiffrement des données :', e.message) }
 try { const n = await ensureLogTriggers(); if (n) console.log('Journal des transactions activé sur', n, 'table(s)') } catch (e) { console.error('Journal des transactions :', e.message) }
+if (!process.env.MOUNTED) {   // en service unique (MOUNTED=1), c'est src/index.js de BackendDental qui écoute
 const server = app.listen(config.port, process.env.HOST || '0.0.0.0', () => { server.keepAliveTimeout = 65000; server.headersTimeout = 66000; console.log('DENTAL prêt sur le port', config.port); if (config.hosted) { const d = process.env.RAILWAY_PUBLIC_DOMAIN; console.log(d ? 'Adresse publique : https://' + d : 'Aucune adresse publique : Railway → service → Settings → Networking → Generate Domain (port ' + config.port + ')'); console.log(config.volume ? 'Données sur le volume : ' + config.volume : 'ATTENTION : aucun volume, les données seront effacées au prochain redéploiement'); return }
   const host = os.hostname().replace(/\.local$/i, ''); const stable = `http://${host}:${config.port}`
   console.log('Sur les autres postes du même réseau, ouvrez :')
@@ -415,8 +416,11 @@ const server = app.listen(config.port, process.env.HOST || '0.0.0.0', () => { se
   console.log("(Si la page ne s'ouvre pas : autorisez le port " + config.port + " dans le pare-feu Windows — voir Utilisateurs → Accès réseau)") })
 // port déjà occupé : message clair (souvent DENTAL tourne déjà dans une autre fenêtre)
 server.on('error', e => { if (e.code === 'EADDRINUSE') { console.error(`\n✖ Le port ${config.port} est déjà utilisé.\n  DENTAL tourne probablement déjà dans une autre fenêtre : ouvrez http://localhost:${config.port}\n  Pour le relancer ici, fermez d'abord l'autre fenêtre (ou Ctrl+C dedans), puis refaites : npm start\n`); process.exit(1) } throw e })
-if (process.env.NODE_ENV !== 'test') { startScheduler(); startPlus() }   // sauvegarde automatique quotidienne
-if (process.env.NODE_ENV !== 'test' || process.env.CLOUD_TEST) startCloud()   // sauvegarde en ligne : détection d'Internet et envoi automatique vers Supabase
+}
+// Sauvegardes « fichier embarqué » : uniquement en mode PGlite (bureau). En Postgres/Supabase
+// (instance partagée), les sauvegardes sont gérées par l'hébergeur de la base.
+if (process.env.NODE_ENV !== 'test' && !process.env.DATABASE_URL) { startScheduler(); startPlus() }   // sauvegarde automatique quotidienne
+if ((process.env.NODE_ENV !== 'test' || process.env.CLOUD_TEST) && !process.env.DATABASE_URL) startCloud()   // sauvegarde en ligne vers Supabase (mode bureau)
 if (process.env.NODE_ENV !== 'test') license.startLicense()   // contrôle en ligne de révocation / prolongation (si SAAS_URL)
 if (process.env.NODE_ENV !== 'test') startIntel()   // moteur d'intelligence opérationnelle (arrière-plan, toutes les 30 minutes)
 if (process.env.NODE_ENV !== 'test') startAlerts()   // notifications automatiques (toutes les 30 minutes)
