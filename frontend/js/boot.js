@@ -140,6 +140,7 @@ function blockedScreen(s) {
   try {
     const s = await licenseStatus()
     applyBrand(s.brand)
+    window.DL_HOSTED = !!s.hosted   // instance partagée (hébergé) : masque les fonctions "bureau" (sauvegardes locales…)
     if (s.status === 'active') return loadApp()
     if (s.status === 'grace') return loadApp(s)
     if (s.needsActivation) return activationScreen(s)
