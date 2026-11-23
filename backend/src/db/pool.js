@@ -34,6 +34,9 @@ export let pool, q, dumpDb, dumpDbWithLsn
 
 if (DB_URL) {
   // ─────────────────────────── MODE POSTGRES / SUPABASE ───────────────────────────
+  // Garde-fou : message clair si DATABASE_URL est malformé (placeholder oublié, caractère non encodé)
+  if (/[<>]/.test(DB_URL) || /\s/.test(DB_URL)) throw new Error("DATABASE_URL invalide : un espace réservé (ex. <REGION>, <MOT_DE_PASSE>) n'a pas été remplacé, ou la chaîne contient un espace. Copiez la chaîne depuis Supabase → Connect → Session pooler et remplacez uniquement le mot de passe.")
+  try { new URL(DB_URL) } catch { throw new Error("DATABASE_URL invalide : si le mot de passe contient des caractères spéciaux (@ # ? / % espace…), encodez-les en pourcentage (ex. @ → %40, # → %23, espace → %20). Astuce : copiez la chaîne depuis Supabase → Connect → Session pooler.") }
   const SCHEMA = (process.env.DB_SCHEMA || 'app').replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'app'
   const { default: pg } = await import('pg')
   // bigint (20) et numeric (1700) en chaînes, comme PGlite (évite la perte de précision)
