@@ -153,6 +153,10 @@ export function licenseGate(req, res, next) {
   const pth = req.path
   if (!pth.startsWith('/api/')) return next()
   if (pth === '/api/health' || pth.startsWith('/api/license')) return next()
+  // Mode hébergé partagé (Supabase) : pas de licence « par machine ». L'accès est contrôlé
+  // PAR CLINIQUE à la connexion (propriétaire = licence + OTP, personnel = mot de passe) ;
+  // seules les cliniques provisionnées (abonnement actif) ont des comptes.
+  if (process.env.DATABASE_URL) return next()
   const s = status()
   if (s.blocked) return res.status(403).json({ error: messageFor(s), code: 'LICENSE', license: { status: s.status, needsActivation: !!s.needsActivation, clinic: s.clinic, exp: s.exp } })
   if (s.status === 'grace') res.setHeader('X-License', 'grace:' + (s.grace_days_left || 0))
