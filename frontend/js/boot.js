@@ -14,7 +14,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 
 function applyBrand(brand = {}) {
   if (brand.color && /^#[0-9a-fA-F]{6}$/.test(brand.color)) document.documentElement.style.setProperty('--b', brand.color)
-  document.title = brand.name ? brand.name + ' — DENTAL' : 'DENTAL'
+  document.title = brand.name ? brand.name + ' — Dental Assist' : 'Dental Assist'
 }
 
 async function licenseStatus() {

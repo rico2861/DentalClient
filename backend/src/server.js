@@ -52,7 +52,12 @@ const fail = (res, s, error, code) => res.status(s).json({ error, code })
 
 // ═══ Porte de licence (ajout Phase 3) ═══════════════════════════════════════
 // Routes toujours accessibles (même licence bloquée) pour pouvoir débloquer :
-app.get('/api/license/status', (req, res) => res.json(license.status()))
+app.get('/api/license/status', (req, res) => {
+  // Instance partagée (hébergé) : pas d'activation par machine. On signale « actif/hébergé »
+  // pour aller directement au login SaaS (l'accès est contrôlé par clinique à la connexion).
+  if (process.env.DATABASE_URL) return res.json({ status: 'active', hosted: true })
+  res.json(license.status())
+})
 app.post('/api/license/activate', wrap(async (req, res) => { try { res.json(await license.activate(req.body || {})) } catch (e) { fail(res, e.http || 400, e.message, e.code) } }))
 app.post('/api/license/request-otp', wrap(async (req, res) => { try { res.json(await license.requestOtp(req.body || {})) } catch (e) { fail(res, e.http || 400, e.message, e.code) } }))
 app.post('/api/license/verify-otp', wrap(async (req, res) => { try { res.json(await license.activateWithOtp(req.body || {})) } catch (e) { fail(res, e.http || 400, e.message, e.code) } }))
