@@ -44,7 +44,7 @@ const authShell = inner => { const h = new Date().getHours(), hello = h < 5 || h
     <div class="lgmid"><div class="lgart" aria-hidden="true">${TOOTH}</div><h1>Bienvenue</h1><p>Connectez-vous pour accéder à l'espace de travail de la clinique.</p></div>
     <div class="lgfoot"><span>${ic('lock', 13)} Accès réservé au personnel</span></div>
   </aside>
-  <main class="lgp"><div class="lgbar"><span class="lgnet ${navigator.onLine ? 'on' : ''}" data-lgnet>${ic('wifi', 13)}<span>${navigator.onLine ? 'En ligne' : 'Hors ligne · mode local'}</span></span><span class="lgclock" data-lgclock>${new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span></div>
+  <main class="lgp"><div class="lgbar"><button type="button" class="lgback" data-a="tovitrine">${ic('left', 14)}<span>Retour au site</span></button><span class="lgnet ${navigator.onLine ? 'on' : ''}" data-lgnet>${ic('wifi', 13)}<span>${navigator.onLine ? 'En ligne' : 'Hors ligne · mode local'}</span></span><span class="lgclock" data-lgclock>${new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span></div>
     <div class="lgc"><div class="lgmob"><span class="lglogo sm">${TOOTH}</span><b>Dental Assist</b></div><span class="lghello">${hello}</span>${inner}</div>
     <p class="lgcopy">© ${new Date().getFullYear()} Dental Assist · Accès réservé au personnel autorisé</p></main></div>` }
 // horloge et état du réseau sur l'écran de connexion
@@ -223,7 +223,7 @@ function render() {
       <div class="lgrow"><label class="lgrem"><input type="checkbox" name="remember" ${saved ? 'checked' : ''}><span>Se souvenir de mon identifiant</span></label><button type="button" class="lgforgot" data-lgforgot>Mot de passe oublié ?</button></div>
       <div class="aerr" id="authErr" role="alert" hidden></div>
       <button class="abtn">${ic('lock', 16)}<span>Se connecter</span></button></form>
-    <p class="sub" style="font-size:12.5px;margin-top:14px">Vous êtes <b>propriétaire</b> du cabinet ? Ce n'est pas le même accès : passez par l'onglet <button type="button" class="alink" data-a="mode-owner" style="display:inline;padding:0;font-size:12.5px">Propriétaire</button> avec votre clé de licence. Les identifiants de votre espace abonné ne servent pas ici.</p>
+    <p class="sub" style="font-size:12.5px;margin-top:14px">Propriétaire ? <button type="button" class="alink" data-a="mode-owner" style="display:inline;padding:0;font-size:12.5px">Connexion avec clé de licence</button></p>
 `) }
   if (me.must_change_password) return app.innerHTML = authShell(`<h2>Nouveau mot de passe</h2><p class="sub">Pour votre sécurité, remplacez le mot de passe temporaire. 12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial ; sans votre nom ni mot courant.</p><form data-f="pw" class="af"><label>Mot de passe temporaire<input name="current" type="password" required autocomplete="current-password"></label><label>Nouveau mot de passe<input name="next" type="password" placeholder="10+ caractères, Aa1" required autocomplete="new-password"></label><div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">Enregistrer</button></form>`)
   if (me.needs_2fa_setup) { app.innerHTML = '<div class="center card" id="v2fa"></div>'; V.mount2fa($('#v2fa')); return }
@@ -428,6 +428,7 @@ document.addEventListener('click', async e => {
     if (await W.click(b, a, id)) return
     if (await V.click(b, a, id)) return
     if (await S8.click(b, a, id)) return
+    if (a === 'tovitrine') { challenge = null; otpInfo = null; ownerChallenge = null; ownerEmail = null; history.replaceState(null, '', location.pathname); import('./public.js').then(m => m.mountPublic('landing')); return }
     if (a === 'cancelotp') { challenge = null; otpInfo = null; render(); return }
     if (a === 'otpresend') { try { const r = await api('/login/resend', { challenge }); otpInfo = { ...otpInfo, email: r }; render(); toast('Nouveau code envoyé à ' + r.to) } catch (x) { otpInfo = { ...otpInfo, email: { sent: false, reason: x.message } }; render() } return }
     if (a === 'mode-owner') { authMode = 'owner'; render(); return }

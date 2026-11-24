@@ -67,6 +67,7 @@ const shell = (inner, active = '') => `<div class="pub"><header class="pub-top">
       <button data-pub="login">Mon abonnement</button>
       <button data-pub="signin">Se connecter</button>
       <button class="pub-cta" data-pub="create">Essai gratuit — 15 jours</button></nav></header>
+  <div class="pub-scrim" data-pub="menu" aria-hidden="true"></div>
   <main class="pub-main">${inner}</main>
   ${footer()}</div>`
 
@@ -252,25 +253,38 @@ async function portal(preselect) {
   try { me = await sapi('/api/account/me', { auth: true }) } catch (e) { if (e.status === 401) { clearToken(); return auth('login') } return app().innerHTML = shell(`<section class="pub-card"><div class="err" style="display:block">${esc(e.message)}</div></section>`) }
   const prices = await sapi('/api/prices').catch(() => ({}))
   const lic = (me.licenses || []).find(l => l.status === 'active')
-  const licHtml = (me.licenses || []).length ? (me.licenses || []).map(l => `<div class="pub-lic"><div><span>${planLabel(l.plan)}</span><code>${esc(l.key)}</code></div><span class="badge ${l.status === 'active' ? 'ok' : 'bad'}">${l.status === 'active' ? 'Active' : 'Expirée'}</span><small>échéance ${fdate(l.ends_at)}</small></div>`).join('') : ''
+  const licHtml = (me.licenses || []).length ? (me.licenses || []).map(l => `<div class="pp-lic">
+      <div class="pp-lic-head"><span class="badge ${l.status === 'active' ? 'ok' : 'bad'}">${l.status === 'active' ? 'Active' : 'Expirée'}</span><b>${planLabel(l.plan)}</b><small>échéance ${fdate(l.ends_at)}</small></div>
+      <div class="pp-lic-key"><code>${esc(l.key)}</code><button class="pp-copy" data-copy="${esc(l.key)}">Copier</button></div></div>`).join('') : ''
   const paid = [['1m', '1 mois', money(prices.PRICE_1M || 1500)], ['1y', '1 an', money(prices.PRICE_1Y || 15000)]]
   const trialBanner = (!lic && !me.trial_used) ? `<div class="pub-trial">
       <span class="tg">Recommandé pour commencer</span>
       <h4>Essai gratuit — 15 jours</h4>
       <p>Toutes les fonctionnalités, sans carte bancaire. Votre licence est émise immédiatement.</p>
       <button class="pub-cta" data-plan="trial">Démarrer l'essai gratuit</button></div>` : ''
-  app().innerHTML = shell(`<section class="pub-card">
-    <div class="pub-head"><div><h2>${esc(me.clinic?.name || 'Mon cabinet')}</h2><p class="muted">${esc(me.clinic?.email || '')}</p></div><button class="pub-link" data-pub="logout">Déconnexion</button></div>
-    <div class="pub-note"><span class="ic">${infoIcon}</span><div>Ici vous gérez votre <b>abonnement</b>. Pour entrer dans le logiciel : activez une licence, créez votre super-admin, puis connectez-vous à l'onglet <b>Propriétaire</b>.</div></div>
+  const step = (n, label, sub, state) => `<li class="pp-step ${state}"><span class="pp-num">${state === 'done' ? '✓' : n}</span><div><b>${label}</b><small>${sub}</small></div></li>`
+  app().innerHTML = shell(`<section class="pub-portal">
+    <div class="pp-head">
+      <div class="pp-id"><div class="pp-avatar">${esc((me.clinic?.name || 'C').trim()[0] || 'C').toUpperCase()}</div><div><h2>${esc(me.clinic?.name || 'Mon cabinet')}</h2><p class="muted">${esc(me.clinic?.email || '')}</p></div></div>
+      <button class="pub-ghost sm" data-pub="logout">Déconnexion</button>
+    </div>
+    <ol class="pp-steps">
+      ${step(1, 'Activer une licence', 'Essai ou abonnement', lic ? 'done' : 'on')}
+      ${step(2, 'Créer le super-admin', 'Compte propriétaire', lic ? 'on' : '')}
+      ${step(3, 'Ouvrir le logiciel', 'Onglet Propriétaire', '')}
+    </ol>
     <div class="err" id="p-err" style="display:none"></div>
-    <h3 class="pub-ttl">Mes licences</h3>
-    ${licHtml || '<p class="muted">Aucune licence active pour le moment.</p>'}
-    ${trialBanner}
-    ${!lic ? `<h3 class="pub-ttl">${me.trial_used ? 'Choisir une formule' : 'Ou passez directement à un abonnement'}</h3>
-      <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div>` : ''}
-    ${lic ? superAdminCard(me) : ''}
+    <div class="pub-card pp-sec">
+      <h3 class="pub-ttl" style="margin-top:0">Mes licences</h3>
+      ${licHtml || '<p class="muted">Aucune licence active. Démarrez votre essai ou choisissez une formule ci-dessous.</p>'}
+      ${trialBanner}
+      ${!lic ? `<h3 class="pub-ttl">${me.trial_used ? 'Choisir une formule' : 'Ou passez directement à un abonnement'}</h3>
+        <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div>` : ''}
+    </div>
+    ${lic ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
     </section>`)
   document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
+  document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1500) }).catch(() => {}) })
   wireSuperAdmin(me)
   if (preselect) choosePlan(preselect)
 }
