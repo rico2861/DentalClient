@@ -14,7 +14,7 @@ const setToken = t => { try { localStorage.setItem(TK, t) } catch {} }
 const clearToken = () => { try { localStorage.removeItem(TK) } catch {} }
 const APP_URL = location.origin   // le logiciel est servi à la même origine
 const infoIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a564c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.3" r=".7" fill="#0a564c" stroke="none"/></svg>'
-const toothIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#107a6d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5c1.6-1.3 3.4-1.2 5 .2.5.4 1.4.4 1.9 0 1.7-1.4 3.5-1.5 5.1-.2 1.6 1.4 1.7 3.6 1.1 6.3-.5 2.3-.6 3.2-1 5.1-.4 1.9-.8 3.6-1.9 3.6-1.3 0-1.4-2.6-2.4-4.3-.4-.7-1.6-.7-2 0-1 1.7-1.1 4.3-2.4 4.3-1.1 0-1.5-1.7-1.9-3.6-.4-1.9-.5-2.8-1-5.1-.6-2.7-.5-4.9 1.1-6.3Z"/></svg>'
+const toothIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d6fd8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5c1.6-1.3 3.4-1.2 5 .2.5.4 1.4.4 1.9 0 1.7-1.4 3.5-1.5 5.1-.2 1.6 1.4 1.7 3.6 1.1 6.3-.5 2.3-.6 3.2-1 5.1-.4 1.9-.8 3.6-1.9 3.6-1.3 0-1.4-2.6-2.4-4.3-.4-.7-1.6-.7-2 0-1 1.7-1.1 4.3-2.4 4.3-1.1 0-1.5-1.7-1.9-3.6-.4-1.9-.5-2.8-1-5.1-.6-2.7-.5-4.9 1.1-6.3Z"/></svg>'
 const sv = p => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`
 const benefitIcons = {
   shield: sv('<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/>'),
@@ -47,11 +47,22 @@ const footer = () => `<footer class="pub-foot"><div class="pub-foot-grid">
   <div><h5>Nous joindre</h5><a href="tel:+50934546896">+509 34 54 68 96</a><a href="mailto:dentalassist@gmail.com">dentalassist@gmail.com</a><span>Port-au-Prince, Haïti</span></div>
   </div><div class="pub-foot-base">© ${new Date().getFullYear()} Dental Assist · Tous droits réservés</div></footer>`
 
+const burgerIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
 // Enveloppe large (pas la carte étroite de connexion)
-const shell = (inner, active = '') => `<div class="pub"><header class="pub-top">
-  <button class="pub-brand" data-pub="home"><span class="pub-logo">D</span> Dental Assist</button>
-  <nav class="pub-nav">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}</nav>
-  <div class="pub-actions"><button class="pub-link" data-pub="signin">Se connecter</button><button class="pub-cta" data-pub="create">Essai gratuit</button></div></header>
+const shell = (inner, active = '') => `<div class="pub"><header class="pub-top"><div class="pub-top-in">
+    <button class="pub-brand" data-pub="home"><span class="pub-logo">D</span> Dental Assist</button>
+    <nav class="pub-nav">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}</nav>
+    <div class="pub-actions">
+      <button class="pub-link hide-sm" data-pub="login">Mon abonnement</button>
+      <button class="pub-link hide-sm" data-pub="signin">Se connecter</button>
+      <button class="pub-cta hide-sm" data-pub="create">Essai gratuit</button>
+      <button class="pub-burger" data-pub="menu" aria-label="Ouvrir le menu">${burgerIcon}</button>
+    </div></div>
+    <nav class="pub-menu">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}
+      <div class="pub-menu-sep"></div>
+      <button data-pub="login">Mon abonnement</button>
+      <button data-pub="signin">Se connecter</button>
+      <button class="pub-cta" data-pub="create">Essai gratuit — 15 jours</button></nav></header>
   <main class="pub-main">${inner}</main>
   ${footer()}</div>`
 
@@ -340,6 +351,9 @@ const VPAGES = { home: landing, features, pricing, faq, about, contact }
 function onClick(e) {
   const el = e.target.closest && e.target.closest('[data-pub]'); if (!el) return
   const a = el.getAttribute('data-pub'); e.preventDefault()
+  const root = document.querySelector('.pub')
+  if (a === 'menu') { root?.classList.toggle('menu-open'); return }
+  root?.classList.remove('menu-open')   // referme le menu mobile à chaque navigation
   if (VPAGES[a]) { VPAGES[a](); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
   if (a === 'create') return auth('register')
   if (a === 'login' || a === 'portal') return portal()
