@@ -30,8 +30,12 @@ async function sapi(path, { body, auth, method } = {}) {
   const h = { 'Content-Type': 'application/json' }
   if (auth) { const t = token(); if (t) h.Authorization = 'Bearer ' + t }
   const r = await fetch('/saas' + path, { method: method || (body ? 'POST' : 'GET'), headers: h, body: body ? JSON.stringify(body) : undefined })
+  const nt = r.headers.get('X-DL-Token'); if (nt) setToken(nt)              // session glissante
   const j = await r.json().catch(() => ({}))
-  if (!r.ok) throw Object.assign(new Error(j.error || 'Erreur'), { status: r.status, code: j.code })
+  if (!r.ok) {
+    if (r.status === 401 && auth) { clearToken(); if (j.code === 'AUTH') { location.hash = ''; mountPublic('landing') } }
+    throw Object.assign(new Error(j.error || 'Erreur'), { status: r.status, code: j.code })
+  }
   return j
 }
 const planLabel = p => ({ trial: 'Essai gratuit 15 jours', '1m': 'Abonnement 1 mois', '1y': 'Abonnement 1 an' }[p] || p)
