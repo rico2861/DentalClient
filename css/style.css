@@ -882,6 +882,9 @@ a.kvr{text-decoration:none;color:inherit}a.kvr:hover{background:#f8fafd}
 .lgclock{text-transform:capitalize}
 .lgc{width:100%;max-width:440px;background:#fff;border:1px solid #e6ebf2;border-radius:22px;padding:36px 34px 30px;box-shadow:0 1px 2px rgba(15,27,51,.04),0 24px 60px -18px rgba(15,27,51,.18);animation:lgin .45s ease both}
 .lgc.wide{max-width:720px}
+/* Espace abonnement (carte large) : barre du haut alignée sur la carte + espacement net (plus de boutons collés à la carte) */
+.auth.lg.wide .lgp{justify-content:flex-start;gap:20px;padding-top:20px}
+.auth.lg.wide .lgbar{max-width:720px}
 /* L'espace abonnement (public.js) vit maintenant dans l'authShell : on y réinjecte les variables de thème définies à l'origine dans .pub */
 .auth.lg{--pbg:#eef2f9;--psurf:#fff;--pink:#0f2a5c;--pmut:#5b6778;--pbrand:#1d6fd8;--pbrand-d:#1552ab;--ptint:#e4edfb;--paccent:#f5a524;--paccent-d:#c87d0a;--pline:#d7e1f1;--pink-soft:#3a4a63}
 /* Inscription / connexion : la carte lgc EST la carte — on neutralise la sous-carte pub-card pour éviter un double encadré */
@@ -1337,7 +1340,7 @@ a.qpi{text-decoration:none}.qpi.cons{border-color:#cfe9dd;background:#f6fcf9}.qp
 .pub-lic code,.pub-key{font-family:ui-monospace,Menlo,monospace;background:var(--ptint);color:var(--pbrand-d);padding:4px 9px;border-radius:7px;font-size:13px;letter-spacing:.03em}
 .pub-lic small{width:100%;color:var(--pmut);font-size:12px}
 .pub-key{display:block;padding:16px;font-size:20px;text-align:center;margin-top:8px;letter-spacing:.12em;font-weight:600;border:1px dashed #9fc0ef}
-.pub-sa{background:var(--pbg);border:1px solid var(--pline);border-radius:14px;padding:20px;margin-top:8px}
+.pub-sa{background:none;border:0;padding:0;margin-top:4px}
 .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px}
 .badge.ok{background:#d6f0e4;color:#0a7d52}.badge.bad{background:#fde3de;color:#b23b2d}
 
