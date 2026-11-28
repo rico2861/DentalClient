@@ -159,8 +159,18 @@ const isAdmin = () => !!me && (me.role === 'OWNER' || String(me.role).startsWith
 // Accès à une entrée du menu : 1 = tout le monde ; 'staff_stats' = statistiques des médecins (direction et finances uniquement)
 const allowed = n => (n[2] === 1 || (n[2] === 'not_owner' ? me.role !== 'OWNER' : null) || (n[2] === 'staff_stats' ? can('view_salaries') || can('manage_users') : n[2] === 'admin_only' ? isAdmin() : n[2] === 'doctor_only' ? ['DENTIST', 'ADMIN_MEDICAL', 'OWNER'].includes(me.role) && can('edit_medical_records') : can(n[2])))
 // déconnexion (bouton, inactivité, session expirée) : adresse #connexion et rechargement complet (aucun état de la session précédente ne reste)
-function toLogin(msg) { try { if (msg) sessionStorage.setItem('dl_msg', msg) } catch {} me = null; challenge = null; history.replaceState(null, '', location.pathname + '#connexion'); location.reload() }
-async function boot() { try { me = await api('/me') } catch { me = null } render() }
+function toLogin(msg) { try { if (msg) sessionStorage.setItem('dl_msg', msg) } catch {} try { localStorage.removeItem('dl_sess') } catch {} me = null; challenge = null; history.replaceState(null, '', location.pathname + '#connexion'); location.reload() }
+// Démarrage : on AFFICHE tout de suite (login, ou court écran de chargement si une session est probable),
+// puis on vérifie la session en arrière-plan. Évite l'écran blanc pendant le réveil du backend (Render).
+const bootSplash = () => authShell(`<div class="lgload"><span class="lgspin" aria-hidden="true"></span><p class="sub">Connexion à votre espace…</p></div>`)
+async function boot() {
+  let hint = ''; try { hint = localStorage.getItem('dl_sess') || '' } catch {}
+  if (hint && (location.hash === '' || location.hash === '#connexion')) $('#app').innerHTML = bootSplash()
+  else render()
+  try { me = await api('/me'); try { localStorage.setItem('dl_sess', '1') } catch {} }
+  catch { me = null; try { localStorage.removeItem('dl_sess') } catch {} }
+  render()
+}
 // Appelé par la page publique (« Se connecter ») pour basculer vers le login clinique.
 window.DL_showClinicLogin = () => { history.replaceState(null, '', location.pathname + '#connexion'); render() }
 const GROUPS = [['Principal', ['dashboard', 'myact', 'mypay', 'patients', 'appts', 'queue']], ['Soins', ['plans', 'pros', 'tariffs']], ['Finances', ['finance', 'billing', 'cash', 'team']], ['Gestion', ['stock', 'reports']], ['Administration', ['users', 'intel', 'backups', 'audit']]]

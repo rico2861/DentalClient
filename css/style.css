@@ -881,9 +881,23 @@ a.kvr{text-decoration:none;color:inherit}a.kvr:hover{background:#f8fafd}
 .lgnet{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:#fff4e0;color:#8a5a00;font-weight:600}.lgnet.on{background:#e7f7ef;color:#13804b}
 .lgclock{text-transform:capitalize}
 .lgc{width:100%;max-width:440px;background:#fff;border:1px solid #e6ebf2;border-radius:22px;padding:36px 34px 30px;box-shadow:0 1px 2px rgba(15,27,51,.04),0 24px 60px -18px rgba(15,27,51,.18);animation:lgin .45s ease both}
+.lgc.wide{max-width:720px}
+/* L'espace abonnement (public.js) vit maintenant dans l'authShell : on y réinjecte les variables de thème définies à l'origine dans .pub */
+.auth.lg{--pbg:#eef2f9;--psurf:#fff;--pink:#0f2a5c;--pmut:#5b6778;--pbrand:#1d6fd8;--pbrand-d:#1552ab;--ptint:#e4edfb;--paccent:#f5a524;--paccent-d:#c87d0a;--pline:#d7e1f1;--pink-soft:#3a4a63}
+/* Inscription / connexion : la carte lgc EST la carte — on neutralise la sous-carte pub-card pour éviter un double encadré */
+.lgc:not(.wide) .pub-card{margin:0;padding:0;border:0;box-shadow:none;max-width:none;background:none}
+.lgc.wide .pub-portal>.pp-head{margin-top:4px}
+.lgbar .pub-actions{display:flex;gap:8px;align-items:center}
+.lgbar .pub-cta{padding:7px 14px;font-size:13px;border-radius:9px}
+.lgbar .pub-link{background:none;border:0;color:#1d6fd8;font-weight:600;font-size:13px;cursor:pointer;padding:7px 8px}
+.lgbar .pub-link:hover{text-decoration:underline}
 @keyframes lgin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .lgmob{display:none;align-items:center;gap:10px;margin-bottom:18px}.lgmob b{letter-spacing:.06em;color:#0f1b33}
 .lghello{display:inline-block;font-size:13px;font-weight:700;color:#1d6fd8;background:#eef5fe;border-radius:99px;padding:4px 11px;margin-bottom:12px}
+.lgload{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:220px;text-align:center}
+.lgload .sub{margin:0}
+.lgspin{width:34px;height:34px;border-radius:50%;border:3px solid #e3ebf7;border-top-color:#1d6fd8;animation:lgspin .7s linear infinite}
+@keyframes lgspin{to{transform:rotate(360deg)}}
 .lgtab{display:flex;gap:6px;margin-bottom:20px;background:#eef2f9;padding:4px;border-radius:12px}
 .lgtab button{transition:background .15s,color .15s,box-shadow .15s}
 .lgalt{margin-top:18px;padding-top:16px;border-top:1px solid #eef1f6;text-align:center;font-size:13px;color:#6b7686}

@@ -8,10 +8,10 @@
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 const money = (n, c = 'HTG') => new Intl.NumberFormat('fr-FR').format(Number(n || 0)) + ' ' + c
 const fdate = s => { try { return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return s } }
-const TK = 'dl_saas_token'
-const token = () => { try { return localStorage.getItem(TK) || '' } catch { return '' } }
-const setToken = t => { try { localStorage.setItem(TK, t) } catch {} }
-const clearToken = () => { try { localStorage.removeItem(TK) } catch {} }
+const TK = 'dl_saas_token', TKT = 'dl_saas_token_at', TK_TTL = 8 * 3600 * 1000   // 8 h d'inactivité → reconnexion
+const token = () => { try { const t = localStorage.getItem(TK) || ''; if (!t) return ''; const at = +(localStorage.getItem(TKT) || 0); if (at && Date.now() - at > TK_TTL) { clearToken(); return '' } return t } catch { return '' } }
+const setToken = t => { try { localStorage.setItem(TK, t); localStorage.setItem(TKT, String(Date.now())) } catch {} }   // l'horodatage est rafraîchi à chaque réponse glissante
+const clearToken = () => { try { localStorage.removeItem(TK); localStorage.removeItem(TKT) } catch {} }
 const APP_URL = location.origin   // le logiciel est servi à la même origine
 const infoIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a564c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.3" r=".7" fill="#0a564c" stroke="none"/></svg>'
 const toothIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d6fd8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5c1.6-1.3 3.4-1.2 5 .2.5.4 1.4.4 1.9 0 1.7-1.4 3.5-1.5 5.1-.2 1.6 1.4 1.7 3.6 1.1 6.3-.5 2.3-.6 3.2-1 5.1-.4 1.9-.8 3.6-1.9 3.6-1.3 0-1.4-2.6-2.4-4.3-.4-.7-1.6-.7-2 0-1 1.7-1.1 4.3-2.4 4.3-1.1 0-1.5-1.7-1.9-3.6-.4-1.9-.5-2.8-1-5.1-.6-2.7-.5-4.9 1.1-6.3Z"/></svg>'
@@ -43,170 +43,32 @@ const planLabel = p => ({ trial: 'Essai gratuit 15 jours', '1m': 'Abonnement 1 m
 const app = () => document.getElementById('app')
 const showErr = (id, m) => { const e = document.getElementById(id); if (e) { e.textContent = m; e.style.display = 'block' } }
 
-const footer = () => `<footer class="pub-foot"><div class="pub-foot-base" style="text-align:center">© ${new Date().getFullYear()} Dental Assist · <a href="tel:+50934546896">+509 34 54 68 96</a> · <a href="mailto:dentalassist@gmail.com">dentalassist@gmail.com</a> · Port-au-Prince, Haïti</div></footer>`
-
-// En-tête minimal (plus de vitrine marketing) : marque + accès connexion
-const shell = (inner, active = '') => {
+const APP_YEAR = new Date().getFullYear()
+const TOOTHW = '<svg viewBox="0 0 24 24" width="30" height="30" fill="#fff"><path d="M12 2.5c-1.6 0-2.6.6-4 .6-2.2 0-4 1.8-4 4.6 0 2.2.8 3.6 1.4 5.6.6 2 .7 4.6 1.6 6.4.5 1 1.5 1.3 2.2.3.7-1 .8-3.3 1.4-4.4.3-.6.9-.9 1.4-.9s1.1.3 1.4.9c.6 1.1.7 3.4 1.4 4.4.7 1 1.7.7 2.2-.3.9-1.8 1-4.4 1.6-6.4.6-2 1.4-3.4 1.4-5.6 0-2.8-1.8-4.6-4-4.6-1.4 0-2.4-.6-4-.6z"/></svg>'
+const LGFEAT = [
+  ['shield', 'Patients & dossiers', 'Fiches médicales, schéma dentaire et documents centralisés.'],
+  ['bolt', 'Rendez-vous & caisse', 'Agenda, file d’attente, facturation et encaissements.'],
+  ['users', 'Équipe & commissions', 'Personnel, salaires et commissions par praticien.'],
+  ['card', 'Abonnement intégré', 'Licence, paiement MonCash ou virement — tout au même endroit.']
+]
+// Même habillage que le logiciel (authShell) : plus de shell « vitrine » séparé.
+// `wide` élargit la carte pour l'espace abonnement (licences, étapes, paiement).
+const shell = (inner, wide = false) => {
   const lg = !!token()
-  return `<div class="pub"><header class="pub-top"><div class="pub-top-in">
-    <button class="pub-brand" data-pub="signin"><span class="pub-logo">D</span> Dental Assist</button>
-    <div class="pub-actions">${lg
-      ? `<button class="pub-link" data-pub="portal">Mon abonnement</button><button class="pub-cta" data-pub="signin">Ouvrir le logiciel</button>`
-      : `<button class="pub-cta" data-pub="signin">Se connecter</button>`}</div>
-    </div></header>
-  <main class="pub-main">${inner}</main>
-  ${footer()}</div>`
+  return `<div class="auth lg${wide ? ' wide' : ''}">
+    <aside class="lgb"><div class="lgglow"></div>
+      <div class="lgtop"><span class="lglogo">${TOOTHW}</span><div><b>Dental Assist</b><small>Logiciel de gestion de cabinet dentaire</small></div></div>
+      <div class="lgmid"><h1>Toute votre clinique,<br><em>dans un seul logiciel</em></h1><p>Créez votre compte, activez votre licence et ouvrez le logiciel — abonnement et paiement inclus.</p>
+        <div class="lgfeat">${LGFEAT.map(([i, t, d]) => `<div><span>${benefitIcons[i]}</span><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div></div>
+      <div class="lgfoot"><span>${lockIcon} Données isolées par cabinet</span></div>
+    </aside>
+    <main class="lgp"><div class="lgbar"><span class="lgclock">Espace abonnement</span>
+      <div class="pub-actions">${lg
+        ? `<button class="pub-link" data-pub="portal">Mon abonnement</button><button class="pub-cta" data-pub="signin">Ouvrir le logiciel</button>`
+        : `<button class="pub-cta" data-pub="signin">Se connecter</button>`}</div></div>
+      <div class="lgc${wide ? ' wide' : ''}"><div class="lgmob"><span class="lglogo sm">${TOOTHW}</span><b>Dental Assist</b></div>${inner}</div>
+      <p class="lgcopy">© ${APP_YEAR} Dental Assist · Port-au-Prince, Haïti · +509 34 54 68 96</p></main></div>`
 }
-
-const FEATURES = [
-  ['Patients & dossiers', 'Dossiers complets, schéma dentaire, antécédents, documents et consentements.'],
-  ['Rendez-vous & salle d\'attente', 'Agenda, file d\'attente temps réel, rappels et suivi des parcours.'],
-  ['Facturation & caisse', 'Devis, factures, encaissements multi-devises, reçus thermiques, dépenses.'],
-  ['Stock & achats', 'Inventaire, consommations, demandes et réceptions d\'achats, laboratoire.'],
-  ['Personnel & paie', 'Employés, salaires, commissions par praticien, retenues et fiches de paie.'],
-  ['Rapports & sécurité', 'Tableaux de bord, journal d\'activité, rôles, double authentification.']
-]
-
-function landing() {
-  const appt = (t, who, what, pill, cls = '') => `<div class="pub-appt"><time>${t}</time><span class="tooth">${toothIcon}</span><div><div class="who">${who}</div><div class="what">${what}</div></div><span class="pill ${cls}">${pill}</span></div>`
-  app().innerHTML = shell(`
-    <section class="pub-hero">
-      <div class="pub-hero-copy">
-        <span class="pub-eyebrow">Logiciel de cabinet dentaire · 100 % en ligne</span>
-        <h1>Gérez tout votre cabinet, <b>d'un seul endroit.</b></h1>
-        <p class="pub-lead">Patients, rendez-vous, facturation, caisse, stock, paie et rapports — en ligne et sécurisé. Les données de chaque clinique restent isolées, visibles par elle seule.</p>
-        <div class="pub-hero-btns"><button class="pub-cta lg" data-pub="create">Créer un compte</button><button class="pub-ghost lg" data-pub="signin">Se connecter</button></div>
-        <div class="pub-trust"><span>Essai gratuit 15 jours</span><span>Sans carte bancaire</span><span>MonCash & virement</span></div>
-      </div>
-      <aside class="pub-glance" aria-hidden="true">
-        <div class="pub-glance-top"><b><span class="pub-glance-dot"></span>Aujourd'hui</b><small>6 rendez-vous</small></div>
-        ${appt('08:30', 'Marie L.', 'Détartrage', 'Terminé')}
-        ${appt('09:15', 'Jean P.', 'Contrôle + radio', 'En salle', 'wait')}
-        ${appt('10:00', 'Rose D.', 'Extraction', 'À venir')}
-        ${appt('11:00', 'Carl B.', 'Pose couronne', 'À venir')}
-      </aside>
-    </section>
-    <p class="pub-sec-label">Tout ce dont le cabinet a besoin</p>
-    <section class="pub-feats">${FEATURES.map(([t, d]) => `<div class="pub-feat"><h3>${esc(t)}</h3><p>${esc(d)}</p></div>`).join('')}</section>
-    <p class="pub-sec-label">Comment démarrer</p>
-    <section class="pub-how"><ol class="pub-steps">
-      <li class="pub-step"><b>Créez votre compte</b><p>Inscrivez votre cabinet et choisissez une formule. L'essai de 15 jours est gratuit, sans carte.</p></li>
-      <li class="pub-step"><b>Activez votre licence</b><p>L'essai s'active aussitôt. Pour un abonnement payant, réglez par MonCash ou virement : la licence s'émet dès confirmation.</p></li>
-      <li class="pub-step"><b>Ouvrez le logiciel</b><p>Créez votre super-admin, puis connectez-vous avec votre clé de licence et un code reçu par e-mail.</p></li>
-    </ol></section>
-
-    <section class="pub-why">
-      <div class="pub-why-head"><h2>Pensé pour la réalité des cabinets</h2><p>Simple à prendre en main, fiable même avec une connexion capricieuse, et sérieux sur la sécurité de vos données.</p></div>
-      <div class="pub-why-grid">
-        <div class="pub-why-card"><div class="pub-why-ic">${benefitIcons.shield}</div><h3>Vos données vous appartiennent</h3><p>Chaque clinique est isolée : vos patients, vos chiffres et vos documents ne sont visibles que par votre équipe. Jamais partagés avec une autre clinique.</p></div>
-        <div class="pub-why-card"><div class="pub-why-ic">${benefitIcons.bolt}</div><h3>Rapide, même hors ligne partielle</h3><p>Interface légère, recherche instantanée, impression des reçus sur imprimante thermique 58/80 mm. Rien à installer.</p></div>
-        <div class="pub-why-card"><div class="pub-why-ic">${benefitIcons.users}</div><h3>Toute l'équipe, chacun son rôle</h3><p>Propriétaire, dentistes, secrétariat, comptable, stock : des permissions claires et un journal d'activité pour la traçabilité.</p></div>
-        <div class="pub-why-card"><div class="pub-why-ic">${benefitIcons.card}</div><h3>Paiements adaptés à Haïti</h3><p>Facturation multi-devises (HTG / USD), encaissements, dettes patients, et abonnement réglé par MonCash ou virement bancaire.</p></div>
-      </div>
-    </section>
-
-    <section class="pub-cta-band">
-      <div><h2>Essayez gratuitement pendant 15 jours</h2><p>Toutes les fonctionnalités, sans carte bancaire. Vous ne payez que si le logiciel vous convient.</p></div>
-      <div class="pub-cta-band-btns"><button class="pub-cta lg" data-pub="create">Créer mon compte</button><button class="pub-ghost lg oninv" data-pub="pricing">Voir les tarifs</button></div>
-    </section>`, 'home')
-}
-
-// En-tête de page de contenu (vitrine)
-const pageHead = (eyebrow, title, lead) => `<section class="pub-phead"><span class="pub-eyebrow">${esc(eyebrow)}</span><h1>${esc(title)}</h1>${lead ? `<p class="pub-lead center">${esc(lead)}</p>` : ''}</section>`
-
-// Détail des fonctionnalités
-const FEAT_DETAIL = [
-  ['Patients & dossiers', 'Le dossier clinique complet, toujours à portée.', ['Fiche patient, antécédents et allergies', 'Schéma dentaire interactif', 'Documents, radios et consentements', 'Historique des soins et des paiements']],
-  ['Rendez-vous & salle d\'attente', 'L\'agenda et le flux de la journée, en temps réel.', ['Agenda par praticien', 'File d\'attente et suivi des parcours', 'Statuts : planifié, confirmé, en salle, terminé', 'Rappels aux patients']],
-  ['Facturation & caisse', 'De le devis au reçu, sans fuite.', ['Devis et factures multi-devises (HTG / USD)', 'Encaissements et dettes patients', 'Reçus thermiques 58 / 80 mm', 'Caisse, dépenses et taux de change']],
-  ['Stock & achats', 'Ne tombez plus jamais en rupture.', ['Inventaire et consommations', 'Demandes et réceptions d\'achats', 'Suivi laboratoire / prothèses', 'Alertes de seuil']],
-  ['Personnel & paie', 'Votre équipe, payée juste.', ['Employés et rôles', 'Salaires et fiches de paie', 'Commissions par praticien', 'Retenues et avances']],
-  ['Rapports & sécurité', 'Pilotez, et dormez tranquille.', ['Tableaux de bord et rapports', 'Journal d\'activité (traçabilité)', 'Rôles et permissions fines', 'Double authentification']]
-]
-function features() {
-  app().innerHTML = shell(pageHead('Fonctionnalités', 'Tout votre cabinet, dans un seul outil', 'Six modules qui couvrent le quotidien d\'un cabinet dentaire, du premier rendez-vous au bilan de fin de mois.')
-    + `<section class="pub-featx">${FEAT_DETAIL.map(([t, s, items]) => `<article class="pub-featx-card">
-        <h3>${esc(t)}</h3><p class="pub-featx-sub">${esc(s)}</p>
-        <ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></article>`).join('')}</section>
-    <section class="pub-cta-band"><div><h2>Voyez-le sur vos propres données</h2><p>Créez un compte et testez gratuitement pendant 15 jours.</p></div>
-      <div class="pub-cta-band-btns"><button class="pub-cta lg" data-pub="create">Créer mon compte</button></div></section>`, 'features')
-}
-
-// Tarifs
-async function pricing() {
-  const prices = await sapi('/api/prices').catch(() => ({}))
-  const m = money(prices.PRICE_1M || 1500), y = money(prices.PRICE_1Y || 15000)
-  const feats = FEATURES.map(f => f[0])
-  const card = (tag, name, price, per, cls, note) => `<div class="pub-price ${cls}">${tag ? `<span class="pp-tag">${tag}</span>` : ''}
-    <h3>${name}</h3><div class="pp-amount">${price}<small>${per}</small></div>
-    <p class="pp-note">${note}</p>
-    <ul class="pp-list">${feats.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
-    <button class="pub-cta wfull ${cls === 'feat' ? '' : 'alt'}" data-pub="create">Commencer</button></div>`
-  app().innerHTML = shell(pageHead('Tarifs', 'Un prix simple, sans surprise', 'Toutes les fonctionnalités dans chaque formule. Vous payez seulement l\'abonnement — aucun frais caché, aucune commission sur vos encaissements.')
-    + `<section class="pub-prices">
-      ${card('Gratuit', 'Essai', '15 jours', '', 'feat', 'Toutes les fonctionnalités, sans carte bancaire.')}
-      ${card('', 'Mensuel', m, ' / mois', '', 'Idéal pour démarrer ou pour une activité saisonnière.')}
-      ${card('Meilleure offre', 'Annuel', y, ' / an', '', 'Le tarif le plus avantageux pour une clinique installée.')}
-    </section>
-    <p class="muted center">Paiement par MonCash ou virement bancaire. La licence est émise dès confirmation du paiement.</p>`, 'pricing')
-}
-
-// FAQ — comment utiliser la plateforme
-const FAQ = [
-  ['Quelle est la différence entre « Mon abonnement » et « Se connecter » ?', 'Votre <b>compte abonné</b> (Mon abonnement) sert à gérer votre formule, vos paiements et votre licence. Le <b>logiciel</b> de la clinique est un accès séparé : on y entre avec sa clé de licence (propriétaire) ou avec ses identifiants fournis par l\'administrateur (personnel).'],
-  ['Comment démarrer concrètement ?', 'Créez un compte, cliquez sur « Démarrer l\'essai gratuit » pour activer votre licence, puis « Créer mon super-admin ». Vous vous connectez ensuite au logiciel via l\'onglet <b>Propriétaire</b> avec votre clé de licence et un code reçu par e-mail.'],
-  ['Comment se connecter en tant que propriétaire ?', 'Sur l\'écran de connexion, choisissez l\'onglet <b>Propriétaire</b>, saisissez votre clé de licence (format DNTL-…) et validez : un code à 6 chiffres est envoyé à l\'e-mail du super-admin. Ce double contrôle protège l\'accès total au cabinet.'],
-  ['Comment ajouter mes employés ?', 'Une fois connecté en propriétaire, ouvrez la page <b>Utilisateurs</b> : créez chaque membre (dentiste, secrétaire, comptable…), attribuez son rôle et ses permissions. Chacun se connecte ensuite via l\'onglet <b>Personnel</b> avec e-mail et mot de passe.'],
-  ['Mes données sont-elles en sécurité ?', 'Oui. Chaque clinique est strictement isolée : vos données ne sont visibles que par votre équipe, jamais par une autre clinique. Les mots de passe sont chiffrés, et vous pouvez activer la double authentification.'],
-  ['Comment payer mon abonnement ?', 'Depuis « Mon abonnement », choisissez une formule et réglez par <b>MonCash</b> ou par <b>virement bancaire</b> (en téléversant la preuve). Votre licence s\'active dès que le paiement est confirmé.'],
-  ['Puis-je l\'utiliser sur téléphone ?', 'Oui, l\'application est responsive et fonctionne dans le navigateur de votre téléphone, tablette ou ordinateur — rien à installer.'],
-  ['Que se passe-t-il à la fin de l\'essai ?', 'Vos données sont conservées. Il vous suffit de choisir une formule payante depuis « Mon abonnement » pour continuer sans interruption.']
-]
-function faq() {
-  app().innerHTML = shell(pageHead('FAQ', 'Questions fréquentes', 'Tout ce qu\'il faut savoir pour bien démarrer et utiliser la plateforme au quotidien.')
-    + `<section class="pub-faq">${FAQ.map(([q, a], i) => `<details class="pub-faq-item"${i === 0 ? ' open' : ''}><summary>${esc(q)}</summary><div class="pub-faq-a">${a}</div></details>`).join('')}</section>
-    <section class="pub-cta-band"><div><h2>Une autre question ?</h2><p>Notre équipe vous répond.</p></div>
-      <div class="pub-cta-band-btns"><button class="pub-cta lg" data-pub="contact">Nous contacter</button></div></section>`, 'faq')
-}
-
-// À propos
-function about() {
-  app().innerHTML = shell(pageHead('À propos', 'Un logiciel dentaire, fait pour Haïti', '')
-    + `<section class="pub-about">
-      <p class="pub-about-lead">Dental Assist est né d\'un constat simple : les cabinets dentaires méritent un outil moderne, fiable et abordable, adapté à la réalité locale — connexion variable, paiements MonCash, facturation en gourdes comme en dollars.</p>
-      <div class="pub-about-grid">
-        <div><h3>Notre mission</h3><p>Rendre la gestion d\'un cabinet aussi simple que possible, pour que les praticiens se concentrent sur leurs patients et non sur la paperasse.</p></div>
-        <div><h3>Pour qui ?</h3><p>Des cabinets d\'un seul praticien aux cliniques avec plusieurs dentistes, secrétaires, comptables et gestionnaires de stock.</p></div>
-        <div><h3>Notre engagement</h3><p>La sécurité et la confidentialité d\'abord : vos données restent les vôtres, isolées et protégées. Nous ne les partageons avec personne.</p></div>
-        <div><h3>Sur place</h3><p>Une équipe joignable à Port-au-Prince, par téléphone et par e-mail, qui connaît votre contexte.</p></div>
-      </div></section>
-    <section class="pub-cta-band"><div><h2>Rejoignez les cabinets qui se simplifient la vie</h2><p>Essai gratuit de 15 jours, sans engagement.</p></div>
-      <div class="pub-cta-band-btns"><button class="pub-cta lg" data-pub="create">Commencer</button></div></section>`, 'about')
-}
-
-// Contact
-function contact() {
-  app().innerHTML = shell(pageHead('Contact', 'Parlons de votre cabinet', 'Une question, une démo, un besoin particulier ? Écrivez-nous — nous répondons vite.')
-    + `<section class="pub-contact">
-      <div class="pub-contact-info">
-        <a class="pub-contact-row" href="tel:+50934546896"><span class="ci-ic">${phoneIcon}</span><div><h4>Téléphone</h4><p>+509 34 54 68 96</p></div></a>
-        <a class="pub-contact-row" href="mailto:dentalassist@gmail.com"><span class="ci-ic">${mailIcon}</span><div><h4>E-mail</h4><p>dentalassist@gmail.com</p></div></a>
-        <div class="pub-contact-row"><span class="ci-ic">${pinIcon}</span><div><h4>Adresse</h4><p>Port-au-Prince, Haïti</p></div></div>
-      </div>
-      <form class="pub-contact-form" id="cform">
-        <div class="fld"><label>Votre nom</label><input id="cf-name" placeholder="Dr…"></div>
-        <div class="fld"><label>E-mail</label><input id="cf-email" type="email" placeholder="vous@cabinet.com"></div>
-        <div class="fld"><label>Message</label><textarea id="cf-msg" rows="5" placeholder="Comment pouvons-nous vous aider ?"></textarea></div>
-        <button class="pub-cta wfull" type="submit">Envoyer le message</button>
-      </form></section>`, 'contact')
-  const f = document.getElementById('cform')
-  if (f) f.onsubmit = e => { e.preventDefault()
-    const subj = encodeURIComponent('Demande — ' + (val('cf-name') || 'Cabinet'))
-    const body = encodeURIComponent((document.getElementById('cf-msg')?.value || '') + '\n\n— ' + (val('cf-name') || '') + ' (' + (val('cf-email') || '') + ')')
-    location.href = `mailto:dentalassist@gmail.com?subject=${subj}&body=${body}` }
-}
-
-// ── Compte abonné : créer / se connecter ──
 function auth(view = 'register') {
   app().innerHTML = shell(`<section class="pub-card"><div class="pub-tabs">
       <button class="${view === 'register' ? 'on' : ''}" data-pub="t-register">Créer un compte</button>
@@ -235,9 +97,9 @@ const pass = id => document.getElementById(id)?.value || ''
 // ── Espace abonné : abonnement, plans, paiements, super-admin ──
 async function portal(preselect) {
   if (!token()) return auth('login')
-  app().innerHTML = shell(`<section class="pub-card"><p class="muted">Chargement de votre espace…</p></section>`)
+  app().innerHTML = shell(`<section class="pub-card"><p class="muted">Chargement de votre espace…</p></section>`, true)
   let me
-  try { me = await sapi('/api/account/me', { auth: true }) } catch (e) { if (e.status === 401) { clearToken(); return auth('login') } return app().innerHTML = shell(`<section class="pub-card"><div class="err" style="display:block">${esc(e.message)}</div></section>`) }
+  try { me = await sapi('/api/account/me', { auth: true }) } catch (e) { if (e.status === 401) { clearToken(); return auth('login') } return app().innerHTML = shell(`<section class="pub-card"><div class="err" style="display:block">${esc(e.message)}</div></section>`, true) }
   const prices = await sapi('/api/prices').catch(() => ({}))
   const lic = (me.licenses || []).find(l => l.status === 'active')
   const licHtml = (me.licenses || []).length ? (me.licenses || []).map(l => `<div class="pp-lic">
@@ -270,7 +132,7 @@ async function portal(preselect) {
         <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div>` : ''}
     </div>
     ${lic ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
-    </section>`)
+    </section>`, true)
   document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1500) }).catch(() => {}) })
   document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => {
@@ -305,7 +167,7 @@ function wireSuperAdmin(me) {
         <p class="muted center">Dernière étape pour entrer dans le logiciel.</p>
         <div class="pub-note"><span class="ic">${infoIcon}</span><div>Cliquez sur <b>Ouvrir le logiciel</b>, onglet <b>Personnel</b>, puis connectez-vous avec :<br><b>${esc(email)}</b> + le mot de passe que vous venez de choisir.<br><span class="muted">(Autre possibilité : onglet Propriétaire avec la clé ci-dessous + un code e-mail.)</span></div></div>
         <div class="fld"><label>Votre clé de licence (à garder secrète)</label><code class="pub-key">${esc(r.license_key)}</code></div>
-        <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></section>`)
+        <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></section>`, true)
     } catch (e) { g.disabled = false; showErr('sa-err', e.message) }
   }
 }
@@ -357,26 +219,20 @@ async function bank(v, plan) {
   }
 }
 
-// Navigation déléguée (data-pub) + routes publiques
-const VPAGES = { home: landing, features, pricing, faq, about, contact }
+// Navigation déléguée (data-pub) — plus aucune page marketing, tout vit dans le logiciel.
+const toClinicLogin = () => { location.hash = '#connexion'; if (window.DL_showClinicLogin) window.DL_showClinicLogin() }
 function onClick(e) {
   const el = e.target.closest && e.target.closest('[data-pub]'); if (!el) return
   const a = el.getAttribute('data-pub'); e.preventDefault()
-  const root = document.querySelector('.pub')
-  if (a === 'menu') { root?.classList.toggle('menu-open'); return }
-  root?.classList.remove('menu-open')   // referme le menu mobile à chaque navigation
-  if (VPAGES[a]) { VPAGES[a](); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
-  if (a === 'create') return auth('register')
+  if (a === 'create' || a === 't-register') return auth('register')
   if (a === 'login' || a === 'portal') return portal()
-  if (a === 't-register') return auth('register')
   if (a === 't-login') return auth('login')
-  if (a === 'logout') { clearToken(); return landing() }
-  if (a === 'signin') { location.hash = '#connexion'; if (window.DL_showClinicLogin) window.DL_showClinicLogin() }
+  if (a === 'logout') { clearToken(); return toClinicLogin() }
+  if (a === 'signin') return toClinicLogin()
 }
 
 export function mountPublic(view = 'account') {
   document.removeEventListener('click', onClick); document.addEventListener('click', onClick)
   if (view === 'portal') return token() ? portal() : auth('login')
-  if (view === 'account') return token() ? portal() : auth('register')
-  landing()
+  return token() ? portal() : auth('register')
 }
