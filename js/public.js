@@ -156,12 +156,15 @@ async function portal(preselect) {
 }
 
 function superAdminCard(me) {
-  return `<h3 class="pub-ttl">Ouvrir le logiciel</h3>
-    <div class="pub-sa"><p class="muted">Créez le compte <b>propriétaire</b> (super-admin) de votre clinique. Vous vous connecterez ensuite au logiciel avec cet <b>e-mail + mot de passe</b> (onglet <b>Personnel</b>) — ou via l'onglet <b>Propriétaire</b> avec votre clé de licence et un code e-mail.</p>
+  return `<h3 class="pub-ttl" style="margin-top:0">Créez votre compte propriétaire</h3>
+    <p class="muted" style="margin:0 0 16px">C'est le compte qui ouvre et gère votre clinique.</p>
+    <div class="pub-sa">
       <div class="err" id="sa-err" style="display:none"></div>
-      <div class="fld"><label>E-mail du super-admin</label><input id="sa-email" type="email" value="${esc(me.clinic?.email || '')}"></div>
-      <div class="fld2"><div class="fld"><label>Mot de passe</label><input id="sa-pw" type="password" placeholder="12 caractères min."></div><div class="fld"><label>Confirmer</label><input id="sa-pw2" type="password"></div></div>
-      <button class="pub-cta wfull" id="sa-go">Créer mon super-admin</button></div>`
+      <div class="fld"><label>E-mail</label><input id="sa-email" type="email" value="${esc(me.clinic?.email || '')}" autocomplete="email"></div>
+      <div class="fld2"><div class="fld"><label>Mot de passe</label><input id="sa-pw" type="password" placeholder="12 caractères min." autocomplete="new-password"></div><div class="fld"><label>Confirmer</label><input id="sa-pw2" type="password" autocomplete="new-password"></div></div>
+      <button class="pub-cta wfull" id="sa-go">Créer mon compte propriétaire</button>
+      <details class="pub-help"><summary>Comment me connecter ensuite ?</summary>Dans le logiciel, onglet <b>Personnel</b> : votre e-mail + mot de passe.</details>
+    </div>`
 }
 function wireSuperAdmin(me) {
   const g = document.getElementById('sa-go'); if (!g) return

@@ -890,6 +890,24 @@ a.kvr{text-decoration:none;color:inherit}a.kvr:hover{background:#f8fafd}
 /* Espace abonnement embarqué dans le logiciel (zone #view) : on réinjecte les variables de thème */
 .subembed{--pbg:#eef2f9;--psurf:#fff;--pink:#0f2a5c;--pmut:#5b6778;--pbrand:#1d6fd8;--pbrand-d:#1552ab;--ptint:#e4edfb;--paccent:#f5a524;--paccent-d:#c87d0a;--pline:#d7e1f1;--pink-soft:#3a4a63;color:var(--pink)}
 .subembed .pub-portal{max-width:860px;margin:0 auto}
+/* Détails repliables discrets (aide « comment me connecter ») */
+.pub-help{margin-top:14px;font-size:13px;color:var(--pmut,#5b6778)}
+.pub-help summary{cursor:pointer;font-weight:600;color:var(--pbrand,#1d6fd8);list-style:none}
+.pub-help summary::-webkit-details-marker{display:none}
+.pub-help summary::before{content:'›';display:inline-block;margin-right:6px;transition:transform .15s}
+.pub-help[open] summary::before{transform:rotate(90deg)}
+.pub-help>*:not(summary){margin-top:8px;line-height:1.5}
+/* ── Onboarding responsive (dans l'authShell ou embarqué) ── */
+.pp-lic-key{flex-wrap:wrap}
+@media(max-width:760px){
+  .lgc.wide,.subembed{--_r:1}
+  .lgc.wide .pp-steps,.subembed .pp-steps{grid-template-columns:1fr;gap:8px}
+  .lgc.wide .pp-head,.subembed .pp-head{flex-wrap:wrap;gap:10px}
+  .lgc.wide .fld2,.subembed .fld2{grid-template-columns:1fr}
+  .lgc.wide .pub-plans,.subembed .pub-plans{grid-template-columns:1fr}
+  .pp-lic-head small{margin-left:0;flex-basis:100%}
+  .pp-lic-key code{flex:1 1 100%;text-align:center}
+}
 .lgbar .pub-actions{display:flex;gap:8px;align-items:center}
 .lgbar .pub-cta{padding:7px 14px;font-size:13px;border-radius:9px}
 .lgbar .pub-link{background:none;border:0;color:#1d6fd8;font-weight:600;font-size:13px;cursor:pointer;padding:7px 8px}
