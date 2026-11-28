@@ -210,8 +210,15 @@ function render() {
     return
   }
   if (me && (location.hash === '#connexion' || location.hash === '')) history.replaceState(null, '', location.pathname + '#tableau-de-bord')
-  // « Mon abonnement » accessible depuis le logiciel (propriétaire) : réutilise l'espace abonné (licences, clés, paiement, preuve)
-  if (me && location.hash === '#abonnement') { import('./public.js').then(m => m.mountPublic('portal')).catch(() => {}); return }
+  // « Mon abonnement » : vraie page À L'INTÉRIEUR du logiciel (barre latérale + en-tête), réservée au propriétaire
+  if (me && location.hash === '#abonnement') {
+    if (me.role !== 'OWNER') { history.replaceState(null, '', location.pathname + '#tableau-de-bord'); return render() }
+    const nvAb = ['abonnement', 'Mon abonnement', 1, 'abonnement', 'receipt']
+    routeGen++; app.innerHTML = layoutHtml(nvAb, 'abonnement')
+    import('./public.js').then(m => m.mountInApp('view')).catch(e => { const v = $('#view'); if (v) v.innerHTML = `<p class="err">${esc(e.message)}</p>` })
+    loadAlerts()
+    return
+  }
   if (!me && challenge) { const m = otpInfo?.methods || { app: true }, em = otpInfo?.email
     return app.innerHTML = authShell(`<h2>Vérification en deux étapes</h2>${em?.sent ? `<div class="otpok">${ic('check', 16)} ${em.recent ? 'Un code vous a déjà été envoyé il y a quelques secondes' : 'Un code à 6 chiffres vient d’être envoyé'} à <b>${esc(em.to)}</b>. Il est valable 10 minutes.</div>` : em ? `<div class="otpwarn">${ic('alert', 16)} <span><b>L'e-mail n'a pas pu être envoyé</b> (${esc(em.reason)}).</span></div>` : ''}
     <p class="sub">Saisissez ${(p => p.length > 1 ? p.slice(0, -1).join(', ') + ' ou ' + p.at(-1) : p[0])([em?.sent && 'le code reçu par e-mail', m.app && 'le code de votre application d\'authentification', m.recovery && 'un code de secours', 'le code d\'accès remis par la direction'].filter(Boolean))}.</p>`

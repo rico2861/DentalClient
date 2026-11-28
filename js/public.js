@@ -40,7 +40,10 @@ async function sapi(path, { body, auth, method } = {}) {
   return j
 }
 const planLabel = p => ({ trial: 'Essai gratuit 15 jours', '1m': 'Abonnement 1 mois', '1y': 'Abonnement 1 an' }[p] || p)
-const app = () => document.getElementById('app')
+// Mode « embarqué » : l'espace abonnement peut s'afficher À L'INTÉRIEUR du logiciel
+// (dans la zone principale #view, avec la barre latérale), au lieu du plein écran.
+let MOUNT_ID = 'app', EMBED = false
+const app = () => document.getElementById(EMBED ? MOUNT_ID : 'app') || document.getElementById('app')
 const showErr = (id, m) => { const e = document.getElementById(id); if (e) { e.textContent = m; e.style.display = 'block' } }
 
 const APP_YEAR = new Date().getFullYear()
@@ -54,6 +57,7 @@ const LGFEAT = [
 // Même habillage que le logiciel (authShell) : plus de shell « vitrine » séparé.
 // `wide` élargit la carte pour l'espace abonnement (licences, étapes, paiement).
 const shell = (inner, wide = false) => {
+  if (EMBED) return `<div class="subembed${wide ? ' wide' : ''}">${inner}</div>`   // dans le logiciel : pas de shell plein écran
   const lg = !!token()
   return `<div class="auth lg${wide ? ' wide' : ''}">
     <aside class="lgb"><div class="lgglow"></div>
@@ -116,13 +120,13 @@ async function portal(preselect) {
   app().innerHTML = shell(`<section class="pub-portal">
     <div class="pp-head">
       <div class="pp-id"><div class="pp-avatar">${esc((me.clinic?.name || 'C').trim()[0] || 'C').toUpperCase()}</div><div><h2>${esc(me.clinic?.name || 'Mon cabinet')}</h2><p class="muted">${esc(me.clinic?.email || '')}</p></div></div>
-      <button class="pub-ghost sm" data-pub="logout">Déconnexion</button>
+      ${EMBED ? '' : '<button class="pub-ghost sm" data-pub="logout">Déconnexion</button>'}
     </div>
-    <ol class="pp-steps">
+    ${EMBED ? '' : `<ol class="pp-steps">
       ${step(1, 'Activer une licence', 'Essai ou abonnement', lic ? 'done' : 'on')}
       ${step(2, 'Créer le super-admin', 'Compte propriétaire', lic ? 'on' : '')}
       ${step(3, 'Ouvrir le logiciel', 'Onglet Propriétaire', '')}
-    </ol>
+    </ol>`}
     <div class="err" id="p-err" style="display:none"></div>
     <div class="pub-card pp-sec">
       <h3 class="pub-ttl" style="margin-top:0">Mes licences</h3>
@@ -131,7 +135,10 @@ async function portal(preselect) {
       ${!lic ? `<h3 class="pub-ttl">${me.trial_used ? 'Choisir une formule' : 'Ou passez directement à un abonnement'}</h3>
         <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div>` : ''}
     </div>
-    ${lic ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
+    ${(lic && EMBED) ? `<div class="pub-card pp-sec"><h3 class="pub-ttl" style="margin-top:0">Renouveler ou changer de formule</h3>
+      <p class="muted" style="margin:0 0 12px">Payez par MonCash ou virement. La nouvelle licence prend effet dès le paiement confirmé.</p>
+      <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div></div>` : ''}
+    ${(lic && !EMBED) ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
     </section>`, true)
   document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1500) }).catch(() => {}) })
@@ -232,7 +239,15 @@ function onClick(e) {
 }
 
 export function mountPublic(view = 'account') {
+  EMBED = false; MOUNT_ID = 'app'
   document.removeEventListener('click', onClick); document.addEventListener('click', onClick)
   if (view === 'portal') return token() ? portal() : auth('login')
   return token() ? portal() : auth('register')
+}
+
+// Monte l'espace abonnement À L'INTÉRIEUR du logiciel (zone #view), avec la barre latérale.
+export function mountInApp(elId = 'view') {
+  EMBED = true; MOUNT_ID = elId
+  document.removeEventListener('click', onClick); document.addEventListener('click', onClick)
+  return token() ? portal() : auth('login')
 }
