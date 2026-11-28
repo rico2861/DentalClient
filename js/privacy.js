@@ -3,10 +3,11 @@
 // des chiffres factices floutés (« 88 888 HTG ») ; l'inspection du code de la page ne révèle rien. Les vraies valeurs
 // sont gardées uniquement en mémoire JavaScript pour pouvoir les réafficher à la désactivation.
 const KEY = 'dl_discretion'
-// actif automatiquement à chaque ouverture de l'application : il faut un geste volontaire pour afficher les montants
-let state = { on: true, contacts: false }
-try { const saved = JSON.parse(localStorage.getItem(KEY) || '{}'); state.contacts = !!saved.contacts } catch {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ contacts: state.contacts })) } catch {} }
+// Désactivé par défaut : les montants (prix des soins, factures, totaux) sont visibles normalement.
+// Le mode discrétion se déclenche à la demande (bouton « Masquer les montants ») et le choix est mémorisé.
+let state = { on: false, contacts: false }
+try { const saved = JSON.parse(localStorage.getItem(KEY) || '{}'); state.on = !!saved.on; state.contacts = !!saved.contacts } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ on: state.on, contacts: state.contacts })) } catch {} }
 const orig = new WeakMap()        // <span class="pvm"> → texte réel
 const origAttr = new WeakMap()    // élément → { attribut: valeur réelle }
 const N = '[\\d]{1,3}(?:[\\s\\u202f\\u00a0.]\\d{3})*(?:,\\d{1,2})?'
