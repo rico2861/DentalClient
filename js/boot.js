@@ -137,6 +137,8 @@ function blockedScreen(s) {
 
 // ─── Démarrage ───────────────────────────────────────────────────────────────
 ;(async () => {
+  // Écran de chargement neutre dès la première peinture (plus de page blanche ni de login qui clignote)
+  if ($app && !$app.innerHTML.trim()) $app.innerHTML = `<div class="bootsplash"><div class="bslogo">D</div><b>Dental Assist</b><span class="lgspin" aria-hidden="true"></span></div>`
   try {
     const s = await licenseStatus()
     applyBrand(s.brand)

@@ -162,7 +162,7 @@ const allowed = n => (n[2] === 1 || (n[2] === 'not_owner' ? me.role !== 'OWNER' 
 function toLogin(msg) { try { if (msg) sessionStorage.setItem('dl_msg', msg) } catch {} try { localStorage.removeItem('dl_sess') } catch {} me = null; challenge = null; history.replaceState(null, '', location.pathname + '#connexion'); location.reload() }
 // Démarrage : on AFFICHE tout de suite (login, ou court écran de chargement si une session est probable),
 // puis on vérifie la session en arrière-plan. Évite l'écran blanc pendant le réveil du backend (Render).
-const bootSplash = () => authShell(`<div class="lgload"><span class="lgspin" aria-hidden="true"></span><p class="sub">Connexion à votre espace…</p></div>`)
+const bootSplash = () => `<div class="bootsplash"><div class="bslogo">D</div><b>Dental Assist</b><span class="lgspin" aria-hidden="true"></span></div>`
 async function boot() {
   let hint = ''; try { hint = localStorage.getItem('dl_sess') || '' } catch {}
   // Si une session est probable, on montre l'écran de chargement sur N'IMPORTE quelle page
