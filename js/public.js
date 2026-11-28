@@ -14,7 +14,6 @@ const setToken = t => { try { localStorage.setItem(TK, t); localStorage.setItem(
 const clearToken = () => { try { localStorage.removeItem(TK); localStorage.removeItem(TKT) } catch {} }
 const APP_URL = location.origin   // le logiciel est servi à la même origine
 const infoIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a564c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.3" r=".7" fill="#0a564c" stroke="none"/></svg>'
-const toothIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d6fd8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.5c1.6-1.3 3.4-1.2 5 .2.5.4 1.4.4 1.9 0 1.7-1.4 3.5-1.5 5.1-.2 1.6 1.4 1.7 3.6 1.1 6.3-.5 2.3-.6 3.2-1 5.1-.4 1.9-.8 3.6-1.9 3.6-1.3 0-1.4-2.6-2.4-4.3-.4-.7-1.6-.7-2 0-1 1.7-1.1 4.3-2.4 4.3-1.1 0-1.5-1.7-1.9-3.6-.4-1.9-.5-2.8-1-5.1-.6-2.7-.5-4.9 1.1-6.3Z"/></svg>'
 const sv = p => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`
 const benefitIcons = {
   shield: sv('<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M9 12l2 2 4-4"/>'),
@@ -22,9 +21,6 @@ const benefitIcons = {
   users: sv('<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><path d="M17 7a3 3 0 010 6"/><path d="M21 20c0-2-1.2-3.6-3-4.4"/>'),
   card: sv('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/><path d="M7 15h4"/>')
 }
-const phoneIcon = sv('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2Z"/>')
-const mailIcon = sv('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/>')
-const pinIcon = sv('<path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/>')
 const lockIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>'
 
 async function sapi(path, { body, auth, method } = {}) {
