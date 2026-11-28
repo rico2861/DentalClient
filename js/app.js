@@ -38,7 +38,10 @@ async function api(p, body, method, extra = {}) {
     throw Object.assign(new Error(msg), { code: j.code, status: r.status }) }
   if (isGet && gen !== routeGen) throw Object.assign(new Error('Page quittée'), { stale: true })   // réponse arrivée trop tard : l'utilisateur est déjà sur une autre page
   return j }
-function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 4000) }
+function toast(m, err) { const t = $('#toast'); if (!t) return
+  t.className = 'toast' + (err ? ' err' : ''); t.innerHTML = `<span class="ti">${ic(err ? 'alert' : 'check', 16)}</span><span class="tm"></span>`
+  t.querySelector('.tm').textContent = m; t.style.display = 'flex'; requestAnimationFrame(() => t.classList.add('show'))
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.classList.remove('show'); setTimeout(() => { t.style.display = 'none' }, 220) }, 3600) }
 const TOOTH = '<svg viewBox="0 0 24 24" width="30" height="30" fill="#fff"><path d="M12 2.5c-1.6 0-2.6.6-4 .6-2.2 0-4 1.8-4 4.6 0 2.2.8 3.6 1.4 5.6.6 2 .7 4.6 1.6 6.4.5 1 1.5 1.3 2.2.3.7-1 .8-3.3 1.4-4.4.3-.6.9-.9 1.4-.9s1.1.3 1.4.9c.6 1.1.7 3.4 1.4 4.4.7 1 1.7.7 2.2-.3.9-1.8 1-4.4 1.6-6.4.6-2 1.4-3.4 1.4-5.6 0-2.8-1.8-4.6-4-4.6-1.4 0-2.4-.6-4-.6z"/></svg>'
 const authShell = inner => { const h = new Date().getHours(), hello = h < 5 || h >= 18 ? 'Bonsoir' : 'Bonjour'
   return `<div class="auth lg">
