@@ -43,16 +43,17 @@ function toast(m, err) { const t = $('#toast'); if (!t) return
   t.querySelector('.tm').textContent = m; t.style.display = 'flex'; requestAnimationFrame(() => t.classList.add('show'))
   clearTimeout(toast._t); toast._t = setTimeout(() => { t.classList.remove('show'); setTimeout(() => { t.style.display = 'none' }, 220) }, 3600) }
 const TOOTH = '<svg viewBox="0 0 24 24" width="30" height="30" fill="#fff"><path d="M12 2.5c-1.6 0-2.6.6-4 .6-2.2 0-4 1.8-4 4.6 0 2.2.8 3.6 1.4 5.6.6 2 .7 4.6 1.6 6.4.5 1 1.5 1.3 2.2.3.7-1 .8-3.3 1.4-4.4.3-.6.9-.9 1.4-.9s1.1.3 1.4.9c.6 1.1.7 3.4 1.4 4.4.7 1 1.7.7 2.2-.3.9-1.8 1-4.4 1.6-6.4.6-2 1.4-3.4 1.4-5.6 0-2.8-1.8-4.6-4-4.6-1.4 0-2.4-.6-4-.6z"/></svg>'
-const authShell = inner => { const h = new Date().getHours(), hello = h < 5 || h >= 18 ? 'Bonsoir' : 'Bonjour'
-  return `<div class="auth lg">
+const LGFEAT = [['users', 'Patients & dossiers', 'Fiches médicales, schéma dentaire et documents centralisés.'], ['calendar', 'Rendez-vous & salle d’attente', 'Agenda, file d’attente et rappels de suivi en temps réel.'], ['file', 'Facturation & caisse', 'Factures, encaissements, dépenses et taux de change réunis.'], ['chart', 'Pilotage & rapports', 'Tableau de bord, commissions des médecins et statistiques.']]
+const authShell = inner => `<div class="auth lg">
   <aside class="lgb"><div class="lgglow"></div>
-    <div class="lgtop"><span class="lglogo">${TOOTH}</span><div><b>Dental Assist</b><small>Gestion de clinique dentaire</small></div></div>
-    <div class="lgmid"><div class="lgart" aria-hidden="true">${TOOTH}</div><h1>Bienvenue</h1><p>Connectez-vous pour accéder à l'espace de travail de la clinique.</p></div>
-    <div class="lgfoot"><span>${ic('lock', 13)} Accès réservé au personnel</span></div>
+    <div class="lgtop"><span class="lglogo">${TOOTH}</span><div><b>Dental Assist</b><small>Logiciel de gestion de cabinet dentaire</small></div></div>
+    <div class="lgmid"><h1>Toute votre clinique,<br><em>dans un seul logiciel</em></h1><p>Patients, rendez-vous, facturation et équipe réunis dans un espace de travail clair, rapide et sécurisé.</p>
+      <div class="lgfeat">${LGFEAT.map(([i, t, d]) => `<div><span>${ic(i, 18)}</span><div><b>${t}</b><small>${d}</small></div></div>`).join('')}</div></div>
+    <div class="lgfoot"><span>${ic('shield', 13)} Données isolées par cabinet</span><span>${ic('lock', 13)} Accès réservé au personnel</span></div>
   </aside>
   <main class="lgp"><div class="lgbar"><span class="lgnet ${navigator.onLine ? 'on' : ''}" data-lgnet>${ic('wifi', 13)}<span>${navigator.onLine ? 'En ligne' : 'Hors ligne · mode local'}</span></span><span class="lgclock" data-lgclock>${new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span></div>
-    <div class="lgc"><div class="lgmob"><span class="lglogo sm">${TOOTH}</span><b>Dental Assist</b></div><span class="lghello">${hello}</span>${inner}</div>
-    <p class="lgcopy">© ${new Date().getFullYear()} Dental Assist · Accès réservé au personnel autorisé</p></main></div>` }
+    <div class="lgc"><div class="lgmob"><span class="lglogo sm">${TOOTH}</span><b>Dental Assist</b></div>${inner}</div>
+    <p class="lgcopy">© ${new Date().getFullYear()} Dental Assist · Accès réservé au personnel autorisé</p></main></div>`
 // horloge et état du réseau sur l'écran de connexion
 setInterval(() => { const c = document.querySelector('[data-lgclock]'); if (c) c.textContent = new Date().toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }, 15000)
 for (const ev of ['online', 'offline']) addEventListener(ev, () => { const n = document.querySelector('[data-lgnet]'); if (n) { n.classList.toggle('on', navigator.onLine); n.querySelector('span').textContent = navigator.onLine ? 'En ligne' : 'Hors ligne · mode local' } })
@@ -209,7 +210,7 @@ function render() {
     + `<button class="alink" data-a="cancelotp">${ic('left', 16)} Retour à la connexion</button>`) }
   if (!me) { let saved = ''; try { saved = localStorage.getItem('dl_email') || '' } catch {}
     const sb = on => `flex:1;padding:9px;border:0;border-radius:9px;font-weight:600;cursor:pointer;background:${on ? '#fff' : 'transparent'};color:${on ? '#0f2a5c' : '#5b6778'};box-shadow:${on ? '0 1px 3px rgba(0,0,0,.08)' : 'none'}`
-    const toggle = `<div style="display:flex;gap:6px;margin-bottom:16px;background:#eef2f9;padding:4px;border-radius:12px">
+    const toggle = `<div class="lgtab">
       <button type="button" data-a="mode-staff" style="${sb(authMode === 'staff')}">Personnel</button>
       <button type="button" data-a="mode-owner" style="${sb(authMode === 'owner')}">Propriétaire</button></div>`
     // ── Propriétaire (super-admin) : licence + code reçu par e-mail ──
@@ -222,18 +223,17 @@ function render() {
       return app.innerHTML = authShell(`${toggle}<h2>Connexion propriétaire</h2><p class="sub">Saisissez la licence de votre clinique. Un code de connexion sera envoyé à l'e-mail du compte super-admin.</p>
         <form data-f="ownerlic" class="af"><label>Clé de licence<span class="lgin">${ic('key', 17)}<input name="license" type="text" autocapitalize="off" spellcheck="false" placeholder="DNTL-XXXXX-XXXXX-…" required autofocus></span></label>
           <div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">${ic('mail', 16)}<span>Recevoir le code</span></button></form>
-        <p class="sub" style="font-size:12.5px;margin-top:14px">Nouvelle clinique ? <button type="button" class="alink" data-a="tosignup" style="display:inline;padding:0;font-size:12.5px">Créer un compte</button></p>`)
+        <div class="lgalt"><span>Nouvelle clinique ?</span> <button type="button" class="alink" data-a="tosignup">Créer un compte</button></div>`)
     }
     // ── Personnel : e-mail / mot de passe (+ 2FA) ──
-    return app.innerHTML = authShell(`${toggle}<h2>Connexion à votre espace</h2><p class="sub">Identifiez-vous avec les accès fournis par l'administrateur de la clinique.</p>
+    return app.innerHTML = authShell(`${toggle}<h2>Connexion à votre espace</h2><p class="sub">Identifiez-vous avec les accès remis par l'administrateur de votre clinique.</p>
     <form data-f="login" class="af lgf"><label>E-mail ou nom d'utilisateur<span class="lgin">${ic('user', 17)}<input name="email" type="text" autocapitalize="off" spellcheck="false" placeholder="vous@clinique.com ou JP620012" required autocomplete="username" value="${esc(saved)}" ${saved ? '' : 'autofocus'}></span></label>
       <label>Mot de passe<span class="lgin pw lgpw">${ic('key', 17)}<input name="password" type="password" placeholder="Votre mot de passe" required autocomplete="current-password" ${saved ? 'autofocus' : ''}><button type="button" class="eye" aria-label="Afficher ou masquer le mot de passe">${ic('eye', 18)}</button></span></label>
       <div class="lgcaps" data-caps hidden>${ic('alert', 14)} Majuscules activées</div>
-      <div class="lgrow"><label class="lgrem"><input type="checkbox" name="remember" ${saved ? 'checked' : ''}><span>Se souvenir de mon identifiant</span></label><button type="button" class="lgforgot" data-lgforgot>Mot de passe oublié ?</button></div>
+      <div class="lgrow"><label class="lgrem"><input type="checkbox" name="remember" ${saved ? 'checked' : ''}><span>Se souvenir de moi</span></label><button type="button" class="lgforgot" data-lgforgot>Mot de passe oublié ?</button></div>
       <div class="aerr" id="authErr" role="alert" hidden></div>
       <button class="abtn">${ic('lock', 16)}<span>Se connecter</span></button></form>
-    <p class="sub" style="font-size:12.5px;margin-top:14px">Propriétaire ? <button type="button" class="alink" data-a="mode-owner" style="display:inline;padding:0;font-size:12.5px">Connexion avec clé de licence</button></p>
-    <p class="sub" style="font-size:12.5px;margin-top:4px">Nouvelle clinique ? <button type="button" class="alink" data-a="tosignup" style="display:inline;padding:0;font-size:12.5px">Créer un compte</button></p>
+    <div class="lgalt"><span>Nouvelle clinique ?</span> <button type="button" class="alink" data-a="tosignup">Créer un compte</button></div>
 `) }
   if (me.must_change_password) return app.innerHTML = authShell(`<h2>Nouveau mot de passe</h2><p class="sub">Pour votre sécurité, remplacez le mot de passe temporaire. 12 caractères minimum, avec majuscule, minuscule, chiffre et caractère spécial ; sans votre nom ni mot courant.</p><form data-f="pw" class="af"><label>Mot de passe temporaire<input name="current" type="password" required autocomplete="current-password"></label><label>Nouveau mot de passe<input name="next" type="password" placeholder="10+ caractères, Aa1" required autocomplete="new-password"></label><div class="aerr" id="authErr" role="alert" hidden></div><button class="abtn">Enregistrer</button></form>`)
   if (me.needs_2fa_setup) { app.innerHTML = '<div class="center card" id="v2fa"></div>'; V.mount2fa($('#v2fa')); return }
