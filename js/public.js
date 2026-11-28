@@ -117,6 +117,7 @@ async function portal(preselect) {
       <p>Toutes les fonctionnalités, sans carte bancaire. Votre licence est émise immédiatement.</p>
       <button class="pub-cta" data-plan="trial">Démarrer l'essai gratuit</button></div>` : ''
   const step = (n, label, sub, state) => `<li class="pp-step ${state}"><span class="pp-num">${state === 'done' ? '✓' : n}</span><div><b>${label}</b><small>${sub}</small></div></li>`
+  const prov = !!me.admin_provisioned   // super-admin déjà créé : on ne redemande plus de le créer
   app().innerHTML = shell(`<section class="pub-portal">
     <div class="pp-head">
       <div class="pp-id"><div class="pp-avatar">${esc((me.clinic?.name || 'C').trim()[0] || 'C').toUpperCase()}</div><div><h2>${esc(me.clinic?.name || 'Mon cabinet')}</h2><p class="muted">${esc(me.clinic?.email || '')}</p></div></div>
@@ -124,8 +125,8 @@ async function portal(preselect) {
     </div>
     ${EMBED ? '' : `<ol class="pp-steps">
       ${step(1, 'Activer une licence', 'Essai ou abonnement', lic ? 'done' : 'on')}
-      ${step(2, 'Créer le super-admin', 'Compte propriétaire', lic ? 'on' : '')}
-      ${step(3, 'Ouvrir le logiciel', 'Onglet Propriétaire', '')}
+      ${step(2, 'Créer le super-admin', 'Compte propriétaire', prov ? 'done' : (lic ? 'on' : ''))}
+      ${step(3, 'Ouvrir le logiciel', 'Onglet Propriétaire', prov ? 'on' : '')}
     </ol>`}
     <div class="err" id="p-err" style="display:none"></div>
     <div class="pub-card pp-sec">
@@ -138,7 +139,10 @@ async function portal(preselect) {
     ${(lic && EMBED) ? `<div class="pub-card pp-sec"><h3 class="pub-ttl" style="margin-top:0">Renouveler ou changer de formule</h3>
       <p class="muted" style="margin:0 0 12px">Payez par MonCash ou virement. La nouvelle licence prend effet dès le paiement confirmé.</p>
       <div class="pub-plans">${paid.map(p => `<button class="pub-plan" data-plan="${p[0]}"><strong>${p[1]}</strong><span class="pp-price">${p[2]}</span><small>licence émise au paiement</small></button>`).join('')}</div></div>` : ''}
-    ${(lic && !EMBED) ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
+    ${(lic && !EMBED && !prov) ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
+    ${(lic && !EMBED && prov) ? `<div class="pub-card pp-sec"><div class="pub-ok"><div class="mark">✓</div><h2>Tout est prêt</h2></div>
+      <p class="muted center">Votre super-admin est déjà créé. Ouvrez le logiciel et connectez-vous (onglet Personnel avec e-mail + mot de passe, ou onglet Propriétaire avec votre clé).</p>
+      <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></div>` : ''}
     </section>`, true)
   document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1500) }).catch(() => {}) })
