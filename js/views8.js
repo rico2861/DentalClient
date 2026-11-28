@@ -148,7 +148,6 @@ export default function install({ $, esc, api, toast, render, me }) {
         submit: () => { const m = document.querySelector('.mo'), inherit = m.querySelector('[data-inherit]').checked, ranges = [0, 1, 2, 3, 4, 5, 6].map(w => { const r = m.querySelector(`[data-sw="${w}"]`); if (inherit || !r || !r.querySelector('[type=checkbox]').checked) return []
             return [...r.querySelectorAll('.schr')].map(x => ({ start: x.querySelector('[data-k=s]').value, end: x.querySelector('[data-k=e]').value })).filter(x => x.start || x.end) }); return api('/schedules/' + doc.id, { ranges }) } })
       if (v) { toast('Horaires de service enregistrés'); render() } return true }
-    if (await ldClick(b, a, id)) return true
     if (a === 'wr-flow') { await api(`/appointments/${id}/flow`, { step: b.dataset.step }); toast({ arrived: 'Arrivée enregistrée', seated: 'Patient appelé en consultation', finished: 'Soin terminé' }[b.dataset.step]); render(); return true }
     if (a === 'wr-refresh') { render(); return true }
     if (a === 'intel-run') { const r = await blocking('Analyse des rendez-vous, des files, des absences, du stock et des ressources…', () => api('/intel/run', {})); toast(`Analyse terminée en ${r.ms} ms · ${r.recommendations} recommandation(s)`); render(); return true }
@@ -159,39 +158,6 @@ export default function install({ $, esc, api, toast, render, me }) {
       toast('Fichier téléchargé'); return true }
     return false
   }
-  // ── Page de démonstration des 7 composants de chargement (administration) ──
-  let ldTab = 'spinner'
-  const LDT = [['spinner', 'Spinner', 'Chargement court et générique, centré dans une zone.', 'Fenêtre « Paiements », recherche de créneaux, visionneuse de radiographies.'],
-    ['skeleton', 'Skeleton', 'Contenu dont on connaît déjà la forme : pas de saut visuel à l\'affichage.', 'Ouverture de chaque page, listes Patients et Dossiers, bas du journal d\'activité.'],
-    ['progress', 'Barre de progression', 'Progression mesurable : pourcentage réel.', 'Téléversement des documents et radiographies (onglet Images du dossier).'],
-    ['button', 'Bouton en chargement', 'Action ponctuelle : bouton désactivé, même largeur, aucun double envoi.', 'Tous les boutons Enregistrer / Créer des fenêtres, formulaires et actions.'],
-    ['fullscreen', 'Plein écran', 'Action bloquante : voile sombre, interactions et focus bloqués.', 'Sauvegarde, génération de la paie, analyse du moteur d\'intelligence.'],
-    ['pull', 'Tirer pour actualiser', 'Geste tactile en haut d\'une liste.', 'Toutes les pages sur téléphone et tablette.'],
-    ['infinite', 'Défilement infini', 'Chargement de la suite en arrivant en bas de la liste.', 'Journal d\'activité.']]
-  const loadersDemo = async () => { const t = LDT.find(x => x[0] === ldTab)
-    const body = { spinner: `<div class="ldd-row"><div class="ldd-box">${L.spinner({ size: 'sm' })}<small>sm</small></div><div class="ldd-box">${L.spinner({ size: 'md' })}<small>md</small></div><div class="ldd-box">${L.spinner({ size: 'lg' })}<small>lg</small></div><div class="ldd-box dark">${L.spinner({ size: 'lg', light: true })}<small>sur fond sombre</small></div></div><div class="ldd-zone" id="lddz">${L.spinnerBlock('Chargement des paiements…')}</div>`,
-      skeleton: `<div class="ldd-g2"><div><h5>Liste</h5>${L.skeleton({ variant: 'list', rows: 3 })}</div><div><h5>Carte</h5>${L.skeleton({ variant: 'card', lines: 3 })}</div><div><h5>Texte</h5>${L.skeleton({ variant: 'text', lines: 4 })}</div><div><h5>Indicateurs</h5>${L.skeleton({ variant: 'kpis' })}</div></div><div class="ldd-zone" id="lddz"></div>`,
-      progress: `<div class="ldd-zone" id="lddz">${L.progressBar({ value: 0, label: 'Téléversement de « radio-panoramique.jpg »…', id: 'lddpb' })}</div>`,
-      button: `<div class="ldd-row"><button data-a="ldd-btn">${ic('check', 16)} Enregistrer le patient</button><button class="sec" data-a="ldd-btn">${ic('download', 16)} Exporter</button></div><p class="muted fnote">Cliquez : le bouton garde sa largeur, se désactive et affiche un spinner pendant 2 secondes.</p>`,
-      fullscreen: `<button data-a="ldd-fs">${ic('lock', 16)} Simuler une action bloquante (3 s)</button><p class="muted fnote">Pendant l'action, rien ne peut être cliqué ni tabulé derrière le voile ; le lecteur d'écran annonce le message.</p>`,
-      pull: `<div class="ldd-phone"><div class="ldd-ptri">${L.spinner({ size: 'sm', label: 'Actualisation…' })}</div><div class="ldd-ptr" id="lddptr"><div class="ldd-list">${['Richo Bréza', 'Marie Joseph', 'Jean Pierre', 'Sonia Paul', 'Luc Michel'].map(n => `<div class="ldd-li"><span class="dav xs">${n.split(' ').map(w => w[0]).join('')}</span><b>${n}</b></div>`).join('')}</div></div></div><button class="sec" data-a="ldd-pull">${ic('undo', 15)} Simuler le geste</button><p class="muted fnote">Sur un écran tactile, tirez la page vers le bas depuis le haut pour l'actualiser.</p>`,
-      infinite: `<div class="ldd-scroll" id="lddsc"><div id="lddinf">${Array.from({ length: 8 }, (_, i) => `<div class="ldd-li"><b>Action n° ${i + 1}</b><small class="muted">exemple</small></div>`).join('')}</div></div><p class="muted fnote">Faites défiler la zone : la suite se charge (squelettes), puis un message indique la fin.</p>` }[ldTab]
-    $('#view').innerHTML = head('Composants de chargement', 'Chaque situation a son propre type de chargement · bibliothèque sans dépendance, animations CSS, accessible, mouvement réduit respecté')
-      + `<div class="ldd-tabs" role="tablist">${LDT.map(([k, l]) => `<button role="tab" aria-selected="${k === ldTab}" class="${k === ldTab ? 'on' : ''}" data-a="ldd-tab" data-id="${k}">${l}</button>`).join('')}</div>`
-      + card(t[1], 'zap', `<p class="ldd-use"><b>Quand :</b> ${t[2]}<br><b>Où dans DENTAL :</b> ${t[3]}</p>${body}`, ['spinner', 'skeleton', 'progress'].includes(ldTab) ? `<button class="bs pri" data-a="ldd-sim">${ic('zap', 14)}Simuler le chargement</button>` : '')
-    if (ldTab === 'infinite') { let n = 8; L.infiniteScroll($('#lddinf'), { hasMore: true, endText: 'Fin de la liste : plus de données.', loadMore: () => new Promise(r => setTimeout(() => { const html = Array.from({ length: 6 }, () => `<div class="ldd-li"><b>Action n° ${++n}</b><small class="muted">chargée</small></div>`).join(''); r({ html, hasMore: n < 26 }) }, 900)) }) } }
-  const ldClick = async (b, a, id) => {
-    if (a === 'ldd-tab') { ldTab = id; render(); return true }
-    if (a === 'ldd-sim') { const z = $('#lddz')
-      if (ldTab === 'spinner') { z.innerHTML = L.spinnerBlock('Chargement des paiements…'); await new Promise(r => setTimeout(r, 1500)); z.innerHTML = `<div class="kvr">${ic('check', 15)}<span>3 paiements chargés</span></div>` }
-      if (ldTab === 'skeleton') { z.innerHTML = L.skeleton({ variant: 'list', rows: 3 }); await new Promise(r => setTimeout(r, 1500)); z.innerHTML = ['Richo Bréza', 'Marie Joseph', 'Jean Pierre'].map(n => `<div class="ldd-li"><span class="dav xs">${n.split(' ').map(w => w[0]).join('')}</span><b>${n}</b></div>`).join('') }
-      if (ldTab === 'progress') { const pb = $('#lddpb'); for (let v = 0; v <= 100; v += 3 + Math.random() * 7) { L.setProgress(pb, v); await new Promise(r => setTimeout(r, 90)) } L.setProgress(pb, 100, 'Document enregistré') }
-      return true }
-    if (a === 'ldd-btn') { const r = L.buttonLoading(b); setTimeout(r, 2000); return true }
-    if (a === 'ldd-fs') { await L.blocking('Sauvegarde complète en cours…', () => new Promise(r => setTimeout(r, 3000))); toast('Action terminée'); return true }
-    if (a === 'ldd-pull') { const p = $('#lddptr'); p.classList.add('pulling'); await new Promise(r => setTimeout(r, 1300)); p.classList.remove('pulling'); p.classList.add('bounce'); setTimeout(() => p.classList.remove('bounce'), 400); toast('Liste actualisée'); return true }
-    return false }
-  // ── Stratégie : complète + différentielle + journal + miroir (inspirée de SQL Server) ──
-  views.loaders = loadersDemo
+  views.intel = intelView
   return { views, submit, click }
 }
