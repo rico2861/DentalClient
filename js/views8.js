@@ -104,6 +104,17 @@ export default function install({ $, esc, api, toast, render, me }) {
         + card('Cumul depuis le début', 'chart', `<div class="kpis3"><div class="stat2"><span>Patients soignés</span><b>${a.patients}</b></div><div class="stat2"><span>Interventions</span><b>${a.acts}</b></div><div class="stat2"><span>Facturé</span><b>${money(a.billed)}</b></div><div class="stat2"><span>Encaissé</span><b>${money(a.collected)}</b></div><div class="stat2"><span>Commissions reçues (hors paie)</span><b>${money(a.commissions_paid)}</b></div></div>`)
     },
     async backups() {
+      if (window.DL_HOSTED) {
+        $('#view').innerHTML = head('Sauvegardes', 'Protection de vos données sur la plateforme en ligne')
+          + `<div class="card"><div class="chd"><h3>${ic('shield', 18)}Vos données sont protégées automatiquement</h3></div>
+            <div style="padding:4px 2px">
+              <div class="kvr"><span>${ic('check', 15)} <b>Base de données</b> — sauvegarde automatique quotidienne</span><span class="badge st-ok">Active</span></div>
+              <div class="kvr"><span>${ic('check', 15)} <b>Documents & images</b> — stockés sur le cloud (R2), répliqués</span><span class="badge st-ok">Actif</span></div>
+              <div class="kvr"><span>${ic('check', 15)} <b>Isolement par clinique</b> — vos données ne sont visibles que par vous</span><span class="badge st-ok">Actif</span></div>
+              <p class="muted" style="margin:14px 2px 0">Sur la plateforme en ligne, l'hébergeur sauvegarde la base chaque jour et conserve plusieurs points de restauration. Vous n'avez aucune sauvegarde manuelle à faire. Pour restaurer un point précis en cas d'incident, contactez le support.</p>
+            </div></div>`
+        return
+      }
       const d = await api('/backups'), bk = d.backups, last = bk[0], s = d.settings, used = bk.reduce((t, b) => t + b.db_size + b.files_size, 0)
       const lastAuto = bk.find(b => b.kind === 'auto'), fails = d.journal.filter(j => !j.ok && j.op === 'backup'), age = last ? (Date.now() - new Date(last.created_at)) / 36e5 : null
       const row = b => `<tr data-s="${esc(b.id)}"><td><b>${b.seq ? `n° ${b.seq} · ` : ''}${fdt(b.created_at)}</b><br><small class="muted">${esc(b.id)}</small></td><td>${badge(...(KIND[b.kind] || [b.kind, 'st-done']))}${b.lsn != null ? `<br><small class="muted">${b.partial ? 'partielle · base seule' : 'complète'} · chaîne ${b.epoch}</small>` : ''}</td><td>${esc(b.by || '—')}</td>

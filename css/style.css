@@ -318,7 +318,7 @@ button.danger-on{background:#c0485a;color:#fff}button.danger-on:hover{background
 .side .sme{display:flex;align-items:center;gap:10px;margin:8px 10px 12px;width:auto;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);color:#fff;text-decoration:none;transition:background .15s}.side .sme:hover,.side .sme.on{background:rgba(255,255,255,.12);color:#fff;box-shadow:none}
 .sme .hn b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sme .hn small{color:#8fa3c7;font-size:12px}.sme .av{flex-shrink:0}
 .top{gap:16px;padding:10px 24px;min-height:64px;background:rgba(255,255,255,.88);backdrop-filter:saturate(1.6) blur(10px);box-shadow:0 1px 0 rgba(15,27,51,.06)}
-.tl{display:flex;align-items:center;gap:11px;min-width:0}.tico{width:38px;height:38px;border-radius:11px;background:var(--bl);color:var(--b);display:grid;place-items:center;flex-shrink:0}
+.top .tl{display:flex;align-items:center;gap:11px;min-width:0;border-left:0;margin:0;padding:0}.tico{width:38px;height:38px;border-radius:11px;background:var(--bl);color:var(--b);display:grid;place-items:center;flex-shrink:0}
 .ptitle{display:flex;flex-direction:column;line-height:1.2;font-size:16.5px;white-space:nowrap}.ptitle small{font-size:12px;font-weight:500;color:#7a8696;text-transform:capitalize}
 .gsearch{flex:1;max-width:460px;display:flex;align-items:center;gap:8px;height:42px;padding:0 10px 0 14px;border-radius:12px;background:#f1f4f9;border:1.5px solid transparent;color:#7a8696;transition:all .15s;margin:0 auto}.gsearch:focus-within{background:#fff;border-color:var(--b);box-shadow:0 0 0 4px rgba(29,111,216,.12)}
 .gsearch input{flex:1;border:0;background:none;height:38px;padding:0;font-size:14.5px;min-width:0;box-shadow:none}.gsearch input:focus{box-shadow:none;background:none}.gsearch kbd{font:600 11px ui-monospace,Consolas,monospace;color:#8a94a6;background:#fff;border:1px solid #dfe5ee;border-radius:6px;padding:2px 7px}.gsp{flex:1}
@@ -1458,3 +1458,10 @@ a.pub-contact-row:hover{border-color:var(--pbrand)}
 .pp-copy{flex:none;background:var(--pbrand);color:#fff;border:0;border-radius:9px;padding:9px 14px;font-weight:600;font-size:13px;cursor:pointer}
 .pp-copy:hover{background:var(--pbrand-d)}
 @media(max-width:620px){.pp-steps{grid-template-columns:1fr}.pp-step small{font-size:12px}}
+
+/* Clé de licence : variante télécharger + note secrète */
+.pp-copy.alt{background:var(--psurf);color:var(--pbrand-d);border:1.5px solid var(--pbrand)}
+.pp-copy.alt:hover{background:var(--ptint)}
+.pp-secret{display:flex;align-items:flex-start;gap:7px;margin:10px 0 0;padding:9px 11px;background:#fff6e6;border:1px solid #f3d99b;border-radius:10px;color:#8a5a00;font-size:12.5px}
+.pp-secret b{color:#7a4f00}
+.pp-lic-key{flex-wrap:wrap}

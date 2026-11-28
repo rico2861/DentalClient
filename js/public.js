@@ -25,6 +25,7 @@ const benefitIcons = {
 const phoneIcon = sv('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2Z"/>')
 const mailIcon = sv('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/>')
 const pinIcon = sv('<path d="M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/>')
+const lockIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>'
 
 async function sapi(path, { body, auth, method } = {}) {
   const h = { 'Content-Type': 'application/json' }
@@ -53,23 +54,28 @@ const footer = () => `<footer class="pub-foot"><div class="pub-foot-grid">
 
 const burgerIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
 // Enveloppe large (pas la carte étroite de connexion)
-const shell = (inner, active = '') => `<div class="pub"><header class="pub-top"><div class="pub-top-in">
+const shell = (inner, active = '') => {
+  const lg = !!token()
+  const actions = lg
+    ? `<button class="pub-link hide-sm" data-pub="signin">Ouvrir le logiciel</button><button class="pub-cta hide-sm" data-pub="portal">Mon espace</button>`
+    : `<button class="pub-link hide-sm" data-pub="login">Mon abonnement</button><button class="pub-link hide-sm" data-pub="signin">Se connecter</button><button class="pub-cta hide-sm" data-pub="create">Essai gratuit</button>`
+  const menuAcct = lg
+    ? `<button data-pub="portal">Mon espace (clés, paiement)</button><button data-pub="signin">Ouvrir le logiciel</button><button class="pub-cta" data-pub="portal">Aller à mon espace</button>`
+    : `<button data-pub="login">Mon abonnement</button><button data-pub="signin">Se connecter</button><button class="pub-cta" data-pub="create">Essai gratuit — 15 jours</button>`
+  return `<div class="pub"><header class="pub-top"><div class="pub-top-in">
     <button class="pub-brand" data-pub="home"><span class="pub-logo">D</span> Dental Assist</button>
     <nav class="pub-nav">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}</nav>
     <div class="pub-actions">
-      <button class="pub-link hide-sm" data-pub="login">Mon abonnement</button>
-      <button class="pub-link hide-sm" data-pub="signin">Se connecter</button>
-      <button class="pub-cta hide-sm" data-pub="create">Essai gratuit</button>
+      ${actions}
       <button class="pub-burger" data-pub="menu" aria-label="Ouvrir le menu">${burgerIcon}</button>
     </div></div>
     <nav class="pub-menu">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}
       <div class="pub-menu-sep"></div>
-      <button data-pub="login">Mon abonnement</button>
-      <button data-pub="signin">Se connecter</button>
-      <button class="pub-cta" data-pub="create">Essai gratuit — 15 jours</button></nav></header>
+      ${menuAcct}</nav></header>
   <div class="pub-scrim" data-pub="menu" aria-hidden="true"></div>
   <main class="pub-main">${inner}</main>
   ${footer()}</div>`
+}
 
 const FEATURES = [
   ['Patients & dossiers', 'Dossiers complets, schéma dentaire, antécédents, documents et consentements.'],
@@ -255,7 +261,8 @@ async function portal(preselect) {
   const lic = (me.licenses || []).find(l => l.status === 'active')
   const licHtml = (me.licenses || []).length ? (me.licenses || []).map(l => `<div class="pp-lic">
       <div class="pp-lic-head"><span class="badge ${l.status === 'active' ? 'ok' : 'bad'}">${l.status === 'active' ? 'Active' : 'Expirée'}</span><b>${planLabel(l.plan)}</b><small>échéance ${fdate(l.ends_at)}</small></div>
-      <div class="pp-lic-key"><code>${esc(l.key)}</code><button class="pp-copy" data-copy="${esc(l.key)}">Copier</button></div></div>`).join('') : ''
+      <div class="pp-lic-key"><code>${esc(l.key)}</code><button class="pp-copy" data-copy="${esc(l.key)}">Copier</button><button class="pp-copy alt" data-dl="${esc(l.key)}">Télécharger</button></div>
+      <p class="pp-secret">${lockIcon} <b>Gardez cette clé secrète</b> — elle donne accès à votre clinique. Ne la partagez pas.</p></div>`).join('') : ''
   const paid = [['1m', '1 mois', money(prices.PRICE_1M || 1500)], ['1y', '1 an', money(prices.PRICE_1Y || 15000)]]
   const trialBanner = (!lic && !me.trial_used) ? `<div class="pub-trial">
       <span class="tg">Recommandé pour commencer</span>
@@ -285,13 +292,18 @@ async function portal(preselect) {
     </section>`)
   document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1500) }).catch(() => {}) })
+  document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => {
+    const content = `DENTAL ASSIST — Clé de licence\r\n\r\nClinique : ${me.clinic?.name || ''}\r\nClé de licence : ${b.dataset.dl}\r\n\r\n⚠ GARDEZ CETTE CLÉ SECRÈTE — elle donne accès à votre clinique.\r\n\r\nPour ouvrir le logiciel :\r\n 1. Créez votre super-admin depuis « Mon abonnement ».\r\n 2. Connectez-vous à l'onglet « Propriétaire » avec cette clé (code par e-mail),\r\n    ou à l'onglet « Personnel » avec l'e-mail + mot de passe du super-admin.`
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = `licence-dental-assist.txt`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+  })
   wireSuperAdmin(me)
   if (preselect) choosePlan(preselect)
 }
 
 function superAdminCard(me) {
   return `<h3 class="pub-ttl">Ouvrir le logiciel</h3>
-    <div class="pub-sa"><p class="muted">Créez le compte <b>propriétaire</b> (super-admin) de votre clinique. Vous vous connecterez ensuite au logiciel via l'onglet <b>Propriétaire</b>, avec votre <b>clé de licence</b> et un <b>code envoyé par e-mail</b>.</p>
+    <div class="pub-sa"><p class="muted">Créez le compte <b>propriétaire</b> (super-admin) de votre clinique. Vous vous connecterez ensuite au logiciel avec cet <b>e-mail + mot de passe</b> (onglet <b>Personnel</b>) — ou via l'onglet <b>Propriétaire</b> avec votre clé de licence et un code e-mail.</p>
       <div class="err" id="sa-err" style="display:none"></div>
       <div class="fld"><label>E-mail du super-admin</label><input id="sa-email" type="email" value="${esc(me.clinic?.email || '')}"></div>
       <div class="fld2"><div class="fld"><label>Mot de passe</label><input id="sa-pw" type="password" placeholder="12 caractères min."></div><div class="fld"><label>Confirmer</label><input id="sa-pw2" type="password"></div></div>
@@ -310,8 +322,8 @@ function wireSuperAdmin(me) {
       app().innerHTML = shell(`<section class="pub-card">
         <div class="pub-ok"><div class="mark">✓</div><h2>Super-admin ${r.created ? 'créé' : 'déjà actif'}</h2></div>
         <p class="muted center">Dernière étape pour entrer dans le logiciel.</p>
-        <div class="pub-note"><span class="ic">${infoIcon}</span><div>Cliquez sur <b>Ouvrir le logiciel</b>, choisissez l'onglet <b>Propriétaire</b>, saisissez la clé ci-dessous, puis le <b>code</b> envoyé à ${esc(email)}.</div></div>
-        <div class="fld"><label>Votre clé de licence</label><code class="pub-key">${esc(r.license_key)}</code></div>
+        <div class="pub-note"><span class="ic">${infoIcon}</span><div>Cliquez sur <b>Ouvrir le logiciel</b>, onglet <b>Personnel</b>, puis connectez-vous avec :<br><b>${esc(email)}</b> + le mot de passe que vous venez de choisir.<br><span class="muted">(Autre possibilité : onglet Propriétaire avec la clé ci-dessous + un code e-mail.)</span></div></div>
+        <div class="fld"><label>Votre clé de licence (à garder secrète)</label><code class="pub-key">${esc(r.license_key)}</code></div>
         <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></section>`)
     } catch (e) { g.disabled = false; showErr('sa-err', e.message) }
   }
