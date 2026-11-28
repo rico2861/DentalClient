@@ -68,7 +68,7 @@ const shell = (inner, wide = false) => {
     </aside>
     <main class="lgp"><div class="lgbar"><span class="lgclock">Espace abonnement</span>
       <div class="pub-actions">${lg
-        ? `<button class="pub-link" data-pub="portal">Mon abonnement</button><button class="pub-cta" data-pub="signin">Ouvrir le logiciel</button>`
+        ? `<button class="pub-link" data-pub="portal">Mon abonnement</button><button class="pub-cta" data-pub="signin">Accéder à ma clinique</button>`
         : `<button class="pub-cta" data-pub="signin">Se connecter</button>`}</div></div>
       <div class="lgc${wide ? ' wide' : ''}"><div class="lgmob"><span class="lglogo sm">${TOOTHW}</span><b>Dental Assist</b></div>${inner}</div>
       <p class="lgcopy">© ${APP_YEAR} Dental Assist · Port-au-Prince, Haïti · +509 34 54 68 96</p></main></div>`
@@ -126,7 +126,7 @@ async function portal(preselect) {
     ${EMBED ? '' : `<ol class="pp-steps">
       ${step(1, 'Activer une licence', 'Essai ou abonnement', lic ? 'done' : 'on')}
       ${step(2, 'Créer le super-admin', 'Compte propriétaire', prov ? 'done' : (lic ? 'on' : ''))}
-      ${step(3, 'Ouvrir le logiciel', 'Onglet Propriétaire', prov ? 'on' : '')}
+      ${step(3, 'Accéder à ma clinique', 'Connexion au logiciel', prov ? 'on' : '')}
     </ol>`}
     <div class="err" id="p-err" style="display:none"></div>
     <div class="pub-card pp-sec">
@@ -142,7 +142,7 @@ async function portal(preselect) {
     ${(lic && !EMBED && !prov) ? `<div class="pub-card pp-sec">${superAdminCard(me)}</div>` : ''}
     ${(lic && !EMBED && prov) ? `<div class="pub-card pp-sec"><div class="pub-ok"><div class="mark">✓</div><h2>Tout est prêt</h2></div>
       <p class="muted center">Votre super-admin est déjà créé. Ouvrez le logiciel et connectez-vous (onglet Personnel avec e-mail + mot de passe, ou onglet Propriétaire avec votre clé).</p>
-      <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></div>` : ''}
+      <button class="pub-cta wfull lg" data-pub="signin">Accéder à ma clinique</button></div>` : ''}
     </section>`, true)
   document.querySelectorAll('[data-plan]').forEach(b => b.onclick = () => choosePlan(b.dataset.plan))
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = 'Copié ✓'; setTimeout(() => b.textContent = 'Copier', 1500) }).catch(() => {}) })
@@ -179,9 +179,9 @@ function wireSuperAdmin(me) {
       app().innerHTML = shell(`<section class="pub-card">
         <div class="pub-ok"><div class="mark">✓</div><h2>Super-admin ${r.created ? 'créé' : 'déjà actif'}</h2></div>
         <p class="muted center">Dernière étape pour entrer dans le logiciel.</p>
-        <div class="pub-note"><span class="ic">${infoIcon}</span><div>Cliquez sur <b>Ouvrir le logiciel</b>, onglet <b>Personnel</b>, puis connectez-vous avec :<br><b>${esc(email)}</b> + le mot de passe que vous venez de choisir.<br><span class="muted">(Autre possibilité : onglet Propriétaire avec la clé ci-dessous + un code e-mail.)</span></div></div>
+        <div class="pub-note"><span class="ic">${infoIcon}</span><div>Cliquez sur <b>Accéder à ma clinique</b>, onglet <b>Personnel</b>, puis connectez-vous avec :<br><b>${esc(email)}</b> + le mot de passe que vous venez de choisir.<br><span class="muted">(Autre possibilité : onglet Propriétaire avec la clé ci-dessous + un code e-mail.)</span></div></div>
         <div class="fld"><label>Votre clé de licence (à garder secrète)</label><code class="pub-key">${esc(r.license_key)}</code></div>
-        <button class="pub-cta wfull lg" data-pub="signin">Ouvrir le logiciel</button></section>`, true)
+        <button class="pub-cta wfull lg" data-pub="signin">Accéder à ma clinique</button></section>`, true)
     } catch (e) { g.disabled = false; showErr('sa-err', e.message) }
   }
 }
