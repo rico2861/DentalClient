@@ -1515,3 +1515,12 @@ a.pub-contact-row:hover{border-color:var(--pbrand)}
 .pp-secret{display:flex;align-items:flex-start;gap:7px;margin:10px 0 0;padding:9px 11px;background:#fff6e6;border:1px solid #f3d99b;border-radius:10px;color:#8a5a00;font-size:12.5px}
 .pp-secret b{color:#7a4f00}
 .pp-lic-key{flex-wrap:wrap}
+
+/* Sauvegarde hébergée : bloc « prête à télécharger » (plus de téléchargement automatique) */
+.hbdl{display:flex;align-items:center;gap:12px;background:#eafaf0;border:1px solid #bfe8cd;border-radius:12px;padding:12px 14px}
+.hbdl>svg{color:#1f9d55;flex:none}
+.hbdlt{flex:1;min-width:0}
+.hbdlt b{display:block;color:#0f5a2e}
+.hbdlt small{color:#3a7a52;font-size:12.5px}
+.hbdl .pri{flex:none}
+@media(max-width:600px){.hbdl{flex-wrap:wrap}.hbdl .pri{width:100%;justify-content:center}}

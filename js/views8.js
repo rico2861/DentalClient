@@ -6,6 +6,7 @@ import { head, btn, kpi, kpis, tips, card, empty, badge, modal, fld, money, fdat
 export default function install({ $, esc, api, toast, render, me }) {
   const fdt = d => d ? new Date(d).toLocaleString('fr-FR', { timeZone: 'America/Port-au-Prince', dateStyle: 'short', timeStyle: 'short' }) : '—'
   const size = n => n > 1e9 ? (n / 1e9).toFixed(2) + ' Go' : n > 1e6 ? (n / 1e6).toFixed(1) + ' Mo' : Math.max(1, Math.round(n / 1e3)) + ' Ko'
+  let hbLast = null   // dernière sauvegarde hébergée générée, en attente de téléchargement (pas de téléchargement automatique)
   const KIND = { manuelle: ['À l\'instant (manuelle)', 'st-info'], auto: ['Périodique', 'st-ok'], hebdomadaire: ['Hebdomadaire complète', 'st-ok'], 'avant-restauration': ['Sécurité (avant restauration)', 'st-warn'], 'apres-restauration': ['Départ de chaîne (après restauration)', 'st-info'] }
   const BTYPE = { complete: ['Complète', 'st-ok', 'database'], partielle: ['Partielle (base seule)', 'st-info', 'database'], differentielle: ['Différentielle', 'st-warn', 'layers'], journal: ['Journal des transactions', 'st-done', 'list'] }
   const DIFFH = { 0: 'Désactivée', 1: 'Toutes les heures', 2: 'Toutes les 2 heures', 4: 'Toutes les 4 heures', 6: 'Toutes les 6 heures', 12: 'Toutes les 12 heures' }, LOGM = { 0: 'Désactivé', 5: 'Toutes les 5 minutes', 15: 'Toutes les 15 minutes (conseillé)', 30: 'Toutes les 30 minutes', 60: 'Toutes les heures' }
@@ -107,13 +108,11 @@ export default function install({ $, esc, api, toast, render, me }) {
       if (window.DL_HOSTED) {
         const log = await api('/backups-hosted').catch(() => [])
         const rows = log.map(b => `<tr><td><b>${fdt(b.created_at)}</b></td><td>${esc(b.created_by || '—')}</td><td class="r">${b.row_count} enregistrements · ${b.tables} tables</td><td class="r">${size(b.bytes)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Aucune sauvegarde manuelle pour le moment.</td></tr>'
-        $('#view').innerHTML = head('Sauvegardes', 'Sauvegarde manuelle (fichier .sql), restauration, et protection automatique', `<button class="pri" data-a="hb-now">${ic('download', 16)} Sauvegarder maintenant</button>`)
-          + `<div class="card"><div class="chd"><h3>${ic('shield', 18)}Protection automatique</h3></div>
-            <div class="kvr"><span>${ic('check', 15)} <b>Base de données</b> — sauvegarde quotidienne par l'hébergeur (Supabase)</span><span class="badge st-ok">Active</span></div>
-            <div class="kvr"><span>${ic('check', 15)} <b>Documents & images</b> — stockés sur le cloud</span><span class="badge st-ok">Actif</span></div></div>
-          <div class="card"><div class="chd"><h3>${ic('download', 18)}Sauvegarde manuelle</h3><span class="muted">Téléchargez un fichier .sql de toutes les données de votre clinique</span></div>
-            <p class="muted" style="margin:0 0 12px">Cliquez sur <b>Sauvegarder maintenant</b> : un fichier <code>.sql</code> se télécharge. Conservez-le en lieu sûr — il contient vos données.</p>
-            <div class="row" style="gap:8px"><button data-a="hb-now">${ic('download', 16)} Sauvegarder et télécharger</button>
+        $('#view').innerHTML = head('Sauvegardes', 'Sauvegarde manuelle de toutes les données de votre clinique (fichier .sql) et restauration', `<button class="pri" data-a="hb-now">${ic('shield', 16)} Sauvegarder maintenant</button>`)
+          + `<div class="card"><div class="chd"><h3>${ic('download', 18)}Sauvegarde manuelle</h3><span class="muted">Un fichier .sql contenant toutes les données de votre clinique</span></div>
+            ${hbLast ? `<div class="hbdl">${ic('check', 20)}<div class="hbdlt"><b>Sauvegarde prête</b><small>${hbLast.total} enregistrements · ${esc(hbLast.filename)}</small></div><button class="pri" data-a="hb-dl">${ic('download', 16)} Télécharger le fichier .sql</button></div>`
+              : `<p class="muted" style="margin:0 0 12px">Cliquez sur <b>Sauvegarder maintenant</b> pour générer la sauvegarde, puis téléchargez le fichier et conservez-le en lieu sûr.</p>`}
+            <div class="row" style="gap:8px;margin-top:${hbLast ? '14px' : '0'}"><button data-a="hb-now">${ic('shield', 16)} ${hbLast ? 'Refaire une sauvegarde' : 'Sauvegarder maintenant'}</button>
               <label class="bs" style="cursor:pointer">${ic('undo', 15)} Restaurer depuis un fichier<input type="file" accept=".sql,text/plain" data-hb-restore hidden></label></div>
             <p class="hint" style="margin:10px 0 0">La restauration <b>remplace</b> les données actuelles de la clinique par celles du fichier. À utiliser avec précaution.</p></div>
           <div class="card ov-table"><div class="chd"><h3>${ic('list', 18)}Journal des sauvegardes</h3></div>
@@ -179,8 +178,10 @@ export default function install({ $, esc, api, toast, render, me }) {
     if (a === 'wr-refresh') { render(); return true }
     if (a === 'intel-run') { const r = await blocking('Analyse des rendez-vous, des files, des absences, du stock et des ressources…', () => api('/intel/run', {})); toast(`Analyse terminée en ${r.ms} ms · ${r.recommendations} recommandation(s)`); render(); return true }
     if (a === 'hb-now') { const r = await blocking('Création de la sauvegarde…', () => api('/backups-hosted', {}))
-      const url = URL.createObjectURL(new Blob([r.sql], { type: 'application/sql;charset=utf-8' })); const el = document.createElement('a'); el.href = url; el.download = r.filename; document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(url)
-      toast(`Sauvegarde téléchargée (${r.total} enregistrements)`); render(); return true }
+      hbLast = r; toast(`Sauvegarde créée (${r.total} enregistrements) — cliquez sur Télécharger`); render(); return true }
+    if (a === 'hb-dl') { if (!hbLast) return true
+      const url = URL.createObjectURL(new Blob([hbLast.sql], { type: 'application/sql;charset=utf-8' })); const el = document.createElement('a'); el.href = url; el.download = hbLast.filename; document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(url)
+      toast('Fichier téléchargé'); return true }
     if (a === 'bk-now') { const T = [['complete', 'Complète', 'database', 'Toute la base + tous les documents et radiographies. Point de départ de toute la stratégie.', 'Quelques secondes'], ['differentielle', 'Différentielle', 'layers', 'Seules les lignes modifiées depuis la dernière complète, et les documents nouveaux.', 'Très rapide'], ['journal', 'Journal des transactions', 'list', 'Toutes les modifications horodatées depuis le dernier journal : permet la restauration à la minute près.', 'Instantané'], ['partielle', 'Partielle', 'database', 'Toute la base, sans les documents ni radiographies : plus légère (avant une mise à jour, par exemple).', 'Rapide']]
       const v = await modal({ title: 'Nouvelle sauvegarde', icon: 'download', wide: true, ok: 'Lancer la sauvegarde', html: `<div class="bkty">${T.map((t, i) => `<label class="bkt"><input type="radio" name="type" value="${t[0]}" ${i ? '' : 'checked'}><span class="bkti">${ic(t[2], 20)}</span><span><b>${t[1]}</b><small>${t[3]}</small><em>${t[4]}</em></span></label>`).join('')}</div><p class="muted fnote">Chaque sauvegarde est relue et vérifiée avant d'être déclarée réussie, puis copiée sur le miroir s'il est configuré.</p>`,
         submit: f => blocking({ complete: 'Sauvegarde complète puis vérification (rechargement et recomptage)…', partielle: 'Sauvegarde partielle (base seule) puis vérification…', differentielle: 'Sauvegarde différentielle (lignes modifiées)…', journal: 'Sauvegarde du journal des transactions…' }[f.type], () => api('/backups', { type: f.type })) })
