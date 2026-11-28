@@ -34,7 +34,7 @@ async function sapi(path, { body, auth, method } = {}) {
   const nt = r.headers.get('X-DL-Token'); if (nt) setToken(nt)              // session glissante
   const j = await r.json().catch(() => ({}))
   if (!r.ok) {
-    if (r.status === 401 && auth) { clearToken(); if (j.code === 'AUTH') { location.hash = ''; mountPublic('landing') } }
+    if (r.status === 401 && auth) { clearToken(); if (j.code === 'AUTH') { location.hash = '#abonnement'; mountPublic('portal') } }
     throw Object.assign(new Error(j.error || 'Erreur'), { status: r.status, code: j.code })
   }
   return j
@@ -43,36 +43,17 @@ const planLabel = p => ({ trial: 'Essai gratuit 15 jours', '1m': 'Abonnement 1 m
 const app = () => document.getElementById('app')
 const showErr = (id, m) => { const e = document.getElementById(id); if (e) { e.textContent = m; e.style.display = 'block' } }
 
-// Liens de navigation de la vitrine
-const NAVLINKS = [['home', 'Accueil'], ['features', 'Fonctionnalités'], ['pricing', 'Tarifs'], ['faq', 'FAQ'], ['about', 'À propos'], ['contact', 'Contact']]
-const footer = () => `<footer class="pub-foot"><div class="pub-foot-grid">
-  <div class="pub-foot-brand"><div class="pub-brand sm"><span class="pub-logo">D</span> Dental Assist</div><p>Le logiciel tout-en-un pour gérer votre cabinet dentaire — en ligne, sécurisé, et pensé pour Haïti.</p></div>
-  <nav><h5>Produit</h5><button data-pub="features">Fonctionnalités</button><button data-pub="pricing">Tarifs</button><button data-pub="faq">FAQ</button></nav>
-  <nav><h5>Société</h5><button data-pub="about">À propos</button><button data-pub="contact">Contact</button><button data-pub="login">Mon abonnement</button></nav>
-  <div><h5>Nous joindre</h5><a href="tel:+50934546896">+509 34 54 68 96</a><a href="mailto:dentalassist@gmail.com">dentalassist@gmail.com</a><span>Port-au-Prince, Haïti</span></div>
-  </div><div class="pub-foot-base">© ${new Date().getFullYear()} Dental Assist · Tous droits réservés</div></footer>`
+const footer = () => `<footer class="pub-foot"><div class="pub-foot-base" style="text-align:center">© ${new Date().getFullYear()} Dental Assist · <a href="tel:+50934546896">+509 34 54 68 96</a> · <a href="mailto:dentalassist@gmail.com">dentalassist@gmail.com</a> · Port-au-Prince, Haïti</div></footer>`
 
-const burgerIcon = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'
-// Enveloppe large (pas la carte étroite de connexion)
+// En-tête minimal (plus de vitrine marketing) : marque + accès connexion
 const shell = (inner, active = '') => {
   const lg = !!token()
-  const actions = lg
-    ? `<button class="pub-link hide-sm" data-pub="signin">Ouvrir le logiciel</button><button class="pub-cta hide-sm" data-pub="portal">Mon espace</button>`
-    : `<button class="pub-link hide-sm" data-pub="login">Mon abonnement</button><button class="pub-link hide-sm" data-pub="signin">Se connecter</button><button class="pub-cta hide-sm" data-pub="create">Essai gratuit</button>`
-  const menuAcct = lg
-    ? `<button data-pub="portal">Mon espace (clés, paiement)</button><button data-pub="signin">Ouvrir le logiciel</button><button class="pub-cta" data-pub="portal">Aller à mon espace</button>`
-    : `<button data-pub="login">Mon abonnement</button><button data-pub="signin">Se connecter</button><button class="pub-cta" data-pub="create">Essai gratuit — 15 jours</button>`
   return `<div class="pub"><header class="pub-top"><div class="pub-top-in">
-    <button class="pub-brand" data-pub="home"><span class="pub-logo">D</span> Dental Assist</button>
-    <nav class="pub-nav">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}</nav>
-    <div class="pub-actions">
-      ${actions}
-      <button class="pub-burger" data-pub="menu" aria-label="Ouvrir le menu">${burgerIcon}</button>
-    </div></div>
-    <nav class="pub-menu">${NAVLINKS.map(([k, l]) => `<button class="${active === k ? 'on' : ''}" data-pub="${k}">${l}</button>`).join('')}
-      <div class="pub-menu-sep"></div>
-      ${menuAcct}</nav></header>
-  <div class="pub-scrim" data-pub="menu" aria-hidden="true"></div>
+    <button class="pub-brand" data-pub="signin"><span class="pub-logo">D</span> Dental Assist</button>
+    <div class="pub-actions">${lg
+      ? `<button class="pub-link" data-pub="portal">Mon abonnement</button><button class="pub-cta" data-pub="signin">Ouvrir le logiciel</button>`
+      : `<button class="pub-cta" data-pub="signin">Se connecter</button>`}</div>
+    </div></header>
   <main class="pub-main">${inner}</main>
   ${footer()}</div>`
 }
@@ -393,8 +374,9 @@ function onClick(e) {
   if (a === 'signin') { location.hash = '#connexion'; if (window.DL_showClinicLogin) window.DL_showClinicLogin() }
 }
 
-export function mountPublic(view = 'landing') {
+export function mountPublic(view = 'account') {
   document.removeEventListener('click', onClick); document.addEventListener('click', onClick)
+  if (view === 'portal') return token() ? portal() : auth('login')
   if (view === 'account') return token() ? portal() : auth('register')
   landing()
 }
