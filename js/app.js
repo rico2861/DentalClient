@@ -413,8 +413,30 @@ const S8 = install8({ $, esc, api, toast, render: () => render(), me: () => me }
 const S9 = install9({ $, esc, api, toast, render: () => render(), me: () => me }); Object.assign(views, S9.views); Object.assign(submit, S9.submit)
 const S10 = install10({ $, esc, api, can, toast, render: () => render(), me: () => me }); Object.assign(views, S10.views)   // tableau de bord adapté à chaque rôle
 const U = install7({ $, esc, api, can, toast, render: () => render(), me: () => me, isAdmin }); Object.assign(views, U.views); Object.assign(submit, U.submit)
-// Tableau de bord « vivant » : rafraîchissement quand l'onglet redevient visible (après une action faite ailleurs)
-document.addEventListener('visibilitychange', () => { if (!document.hidden && me && (location.hash === '#tableau-de-bord' || location.hash === '') && $('#view') && views.dashboard) Promise.resolve(views.dashboard()).catch(() => {}) })
+// ── Rafraîchissement continu, NON intrusif ──────────────────────────────────
+// Objectif : garder la plateforme « vivante » SANS jamais gêner une opération.
+// On ne rafraîchit que si l'utilisateur est inactif et qu'aucune opération n'est
+// en cours : pas de saisie, pas de modale, pas de menu ouvert, onglet visible.
+let lastInteract = Date.now()
+;['keydown', 'pointerdown', 'input', 'touchstart', 'wheel'].forEach(ev => document.addEventListener(ev, () => { lastInteract = Date.now() }, { capture: true, passive: true }))
+const overlayOpen = () => document.body.classList.contains('mopen') || document.body.classList.contains('sopen') || !!document.querySelector('.umenu:not([hidden]), #bp:not([hidden]), .ppk:not([hidden]), .idlew')
+const typingNow = () => { const ae = document.activeElement; return !!ae && (/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable) }
+// Un champ visible contient-il du texte saisi mais pas encore enregistré ? (on ne doit jamais l'effacer)
+const viewDirty = () => { const v = $('#view'); if (!v) return false; for (const el of v.querySelectorAll('input:not([type=hidden]), textarea')) { if (el.type === 'checkbox' || el.type === 'radio') { if (el.checked !== el.defaultChecked) return true } else if ((el.value || '') !== (el.defaultValue || '')) return true } return false }
+const currentViewKey = () => { const h = location.hash.slice(1).split('/')[0]; const nv = NAV.find(n => n[3] === (h || '') || n[0] === h) || (h ? null : NAV[0]); return nv?.[0] }
+function softRefresh() {
+  if (!me || document.hidden || overlayOpen() || typingNow() || viewDirty()) return   // une opération est en cours → on ne touche à rien
+  loadAlerts()                                                          // badge d'alertes (non intrusif)
+  if (location.hash === '#abonnement') return                          // page embarquée : pas de re-render auto
+  const key = currentViewKey(), v = $('#view')
+  if (!key || !views[key] || !v) return
+  const y = window.scrollY, vt = v.scrollTop                            // on restaure la position de défilement après le refresh
+  Promise.resolve(views[key]()).then(() => { window.scrollTo(0, y); const m = $('#view'); if (m) m.scrollTop = vt }).catch(() => {})
+}
+// Au retour sur l'onglet (geste naturel) : refresh immédiat si rien n'est en cours
+document.addEventListener('visibilitychange', () => { if (!document.hidden) softRefresh() })
+// En continu, seulement après 20 s sans aucune interaction (donc jamais pendant qu'on travaille)
+setInterval(() => { if (Date.now() - lastInteract >= 20000) softRefresh() }, 25000)
 document.addEventListener('submit', async e => { const f = e.target.dataset.f; if (!f) return; e.preventDefault()
   const b = e.target.querySelector('.abtn'), err = $('#authErr'), txt = b && b.innerHTML
   if (err) { err.hidden = true; err.classList.remove('info') } if (b) { b.disabled = true; b.innerHTML = '<span class="lgspin"></span><span>Vérification…</span>' }
