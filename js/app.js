@@ -165,7 +165,9 @@ function toLogin(msg) { try { if (msg) sessionStorage.setItem('dl_msg', msg) } c
 const bootSplash = () => authShell(`<div class="lgload"><span class="lgspin" aria-hidden="true"></span><p class="sub">Connexion à votre espace…</p></div>`)
 async function boot() {
   let hint = ''; try { hint = localStorage.getItem('dl_sess') || '' } catch {}
-  if (hint && (location.hash === '' || location.hash === '#connexion')) $('#app').innerHTML = bootSplash()
+  // Si une session est probable, on montre l'écran de chargement sur N'IMPORTE quelle page
+  // (sinon on verrait brièvement le login au rafraîchissement d'une page interne).
+  if (hint) $('#app').innerHTML = bootSplash()
   else render()
   try { me = await api('/me'); try { localStorage.setItem('dl_sess', '1') } catch {} }
   catch { me = null; try { localStorage.removeItem('dl_sess') } catch {} }
@@ -411,6 +413,8 @@ const S8 = install8({ $, esc, api, toast, render: () => render(), me: () => me }
 const S9 = install9({ $, esc, api, toast, render: () => render(), me: () => me }); Object.assign(views, S9.views); Object.assign(submit, S9.submit)
 const S10 = install10({ $, esc, api, can, toast, render: () => render(), me: () => me }); Object.assign(views, S10.views)   // tableau de bord adapté à chaque rôle
 const U = install7({ $, esc, api, can, toast, render: () => render(), me: () => me, isAdmin }); Object.assign(views, U.views); Object.assign(submit, U.submit)
+// Tableau de bord « vivant » : rafraîchissement quand l'onglet redevient visible (après une action faite ailleurs)
+document.addEventListener('visibilitychange', () => { if (!document.hidden && me && (location.hash === '#tableau-de-bord' || location.hash === '') && $('#view') && views.dashboard) Promise.resolve(views.dashboard()).catch(() => {}) })
 document.addEventListener('submit', async e => { const f = e.target.dataset.f; if (!f) return; e.preventDefault()
   const b = e.target.querySelector('.abtn'), err = $('#authErr'), txt = b && b.innerHTML
   if (err) { err.hidden = true; err.classList.remove('info') } if (b) { b.disabled = true; b.innerHTML = '<span class="lgspin"></span><span>Vérification…</span>' }

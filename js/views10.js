@@ -82,9 +82,11 @@ export default function install({ $, esc, api, can, toast, render, me }) {
       get(`/dashboard/owner?period=${per}&date=${today()}`, wantOwner && P !== 'reception' && P !== 'doctor'),
       get(`/finance/stats?period=${per}&date=${today()}`, can('view_finances') && ['direction', 'finance'].includes(P)),
       get('/me/dashboard'), get('/queue', can('manage_queue')),
-      get('/backups', P === 'direction'), get('/audit?limit=8', can('view_audit_logs') && P === 'direction')])
+      get(window.DL_HOSTED ? '/backups-hosted' : '/backups', P === 'direction'), get('/audit?limit=8', can('view_audit_logs') && P === 'direction')])
     const I = can('manage_appointments') && ['direction', 'medical', 'doctor', 'reception'].includes(P) ? await get('/intel/reception') : null
-    return { P, O, F, S, Q, B, A, I } }
+    // En hébergé, /backups-hosted renvoie la liste des sauvegardes manuelles : on la normalise au format attendu
+    const Bn = window.DL_HOSTED && Array.isArray(B) ? { hosted: true, backups: B.map(r => ({ created_at: r.created_at, by: r.created_by })) } : B
+    return { P, O, F, S, Q, B: Bn, A, I } }
 
   // ── construction de la page ──
   async function dashboard() {
@@ -180,11 +182,17 @@ export default function install({ $, esc, api, can, toast, render, me }) {
         f && dom('wallet', 'green', 'Trésorerie', (f.cash || []).slice(0, 3).map(c => [c.name, money(num(c.balance), c.currency)]), '#caisse-depenses')].filter(Boolean)
       if (doms.length) blocks.splice(F ? 2 : 0, 0, sec('Vue d\'ensemble', 'grid', `<div class="zddomg">${doms.join('')}</div>`, { cls: 'zspan3' }))
       if (A) blocks.push(sec('Activité récente', 'list', feed(A), { action: `<a class="bs" href="#journal">Journal${ic('right', 13)}</a>` }))
-      if (B) { const last = B.backups?.[0], cl = B.cloud?.state; blocks.push(sec('État du système', 'shield', `<div class="zdsys">
-          <div class="${last && Date.now() - new Date(last.created_at) < 26 * 36e5 ? 'ok' : 'ko'}">${ic('download', 15)}<span>Dernière sauvegarde</span><b>${last ? fdt(last.created_at) : 'aucune'}</b></div>
-          <div class="${B.cloud?.configured ? (cl?.last_error ? 'ko' : 'ok') : 'off'}">${ic('shield', 15)}<span>Copie en ligne</span><b>${B.cloud?.configured ? (cl?.last_sync ? fdt(cl.last_sync) : 'en attente') : 'non configurée'}</b></div>
-          <div class="${B.strategy?.mirror?.ok ? 'ok' : 'off'}">${ic('package', 15)}<span>Miroir (2e disque)</span><b>${B.strategy?.mirror ? (B.strategy.mirror.ok ? 'actif' : 'inaccessible') : 'non configuré'}</b></div>
-          <div class="ok">${ic('clock', 15)}<span>Perte maximale</span><b>${B.strategy?.rpo ? B.strategy.rpo + ' min' : '—'}</b></div></div>`, { action: `<a class="bs" href="#sauvegardes">Sauvegardes${ic('right', 13)}</a>` })) } }
+      if (B) { const last = B.backups?.[0], cl = B.cloud?.state
+        const sysInner = B.hosted
+          ? `<div class="zdsys">
+              <div class="${last ? 'ok' : 'ko'}">${ic('download', 15)}<span>Dernière sauvegarde</span><b>${last ? fdt(last.created_at) : 'aucune'}</b></div>
+              <div class="ok">${ic('shield', 15)}<span>Documents & images</span><b>stockés en ligne</b></div></div>`
+          : `<div class="zdsys">
+              <div class="${last && Date.now() - new Date(last.created_at) < 26 * 36e5 ? 'ok' : 'ko'}">${ic('download', 15)}<span>Dernière sauvegarde</span><b>${last ? fdt(last.created_at) : 'aucune'}</b></div>
+              <div class="${B.cloud?.configured ? (cl?.last_error ? 'ko' : 'ok') : 'off'}">${ic('shield', 15)}<span>Copie en ligne</span><b>${B.cloud?.configured ? (cl?.last_sync ? fdt(cl.last_sync) : 'en attente') : 'non configurée'}</b></div>
+              <div class="${B.strategy?.mirror?.ok ? 'ok' : 'off'}">${ic('package', 15)}<span>Miroir (2e disque)</span><b>${B.strategy?.mirror ? (B.strategy.mirror.ok ? 'actif' : 'inaccessible') : 'non configuré'}</b></div>
+              <div class="ok">${ic('clock', 15)}<span>Perte maximale</span><b>${B.strategy?.rpo ? B.strategy.rpo + ' min' : '—'}</b></div></div>`
+        blocks.push(sec('État du système', 'shield', sysInner, { action: `<a class="bs" href="#sauvegardes">Sauvegardes${ic('right', 13)}</a>` })) } }
 
     $('#view').innerHTML = `<div class="zdash2 p-${P}">${hero}${K.length ? `<div class="zdkg">${K.map(kpi).join('')}</div>` : ''}<div class="zdgrid2">${recsHtml(recs).replace('class="zdcard ', 'class="zdcard zdrecs ')}${layout(blocks)}</div></div>`; pack()
     // actualisation en direct de la salle d'attente (toutes les 30 s, seulement sur cette page)
