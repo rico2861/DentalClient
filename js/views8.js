@@ -105,14 +105,24 @@ export default function install({ $, esc, api, toast, render, me }) {
     },
     async backups() {
       if (window.DL_HOSTED) {
-        $('#view').innerHTML = head('Sauvegardes', 'Protection de vos données sur la plateforme en ligne')
-          + `<div class="card"><div class="chd"><h3>${ic('shield', 18)}Vos données sont protégées automatiquement</h3></div>
-            <div style="padding:4px 2px">
-              <div class="kvr"><span>${ic('check', 15)} <b>Base de données</b> — sauvegarde automatique quotidienne</span><span class="badge st-ok">Active</span></div>
-              <div class="kvr"><span>${ic('check', 15)} <b>Documents & images</b> — stockés sur le cloud (R2), répliqués</span><span class="badge st-ok">Actif</span></div>
-              <div class="kvr"><span>${ic('check', 15)} <b>Isolement par clinique</b> — vos données ne sont visibles que par vous</span><span class="badge st-ok">Actif</span></div>
-              <p class="muted" style="margin:14px 2px 0">Sur la plateforme en ligne, l'hébergeur sauvegarde la base chaque jour et conserve plusieurs points de restauration. Vous n'avez aucune sauvegarde manuelle à faire. Pour restaurer un point précis en cas d'incident, contactez le support.</p>
-            </div></div>`
+        const log = await api('/backups-hosted').catch(() => [])
+        const rows = log.map(b => `<tr><td><b>${fdt(b.created_at)}</b></td><td>${esc(b.created_by || '—')}</td><td class="r">${b.row_count} enregistrements · ${b.tables} tables</td><td class="r">${size(b.bytes)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Aucune sauvegarde manuelle pour le moment.</td></tr>'
+        $('#view').innerHTML = head('Sauvegardes', 'Sauvegarde manuelle (fichier .sql), restauration, et protection automatique', `<button class="pri" data-a="hb-now">${ic('download', 16)} Sauvegarder maintenant</button>`)
+          + `<div class="card"><div class="chd"><h3>${ic('shield', 18)}Protection automatique</h3></div>
+            <div class="kvr"><span>${ic('check', 15)} <b>Base de données</b> — sauvegarde quotidienne par l'hébergeur (Supabase)</span><span class="badge st-ok">Active</span></div>
+            <div class="kvr"><span>${ic('check', 15)} <b>Documents & images</b> — stockés sur le cloud</span><span class="badge st-ok">Actif</span></div></div>
+          <div class="card"><div class="chd"><h3>${ic('download', 18)}Sauvegarde manuelle</h3><span class="muted">Téléchargez un fichier .sql de toutes les données de votre clinique</span></div>
+            <p class="muted" style="margin:0 0 12px">Cliquez sur <b>Sauvegarder maintenant</b> : un fichier <code>.sql</code> se télécharge. Conservez-le en lieu sûr — il contient vos données.</p>
+            <div class="row" style="gap:8px"><button data-a="hb-now">${ic('download', 16)} Sauvegarder et télécharger</button>
+              <label class="bs" style="cursor:pointer">${ic('undo', 15)} Restaurer depuis un fichier<input type="file" accept=".sql,text/plain" data-hb-restore hidden></label></div>
+            <p class="hint" style="margin:10px 0 0">La restauration <b>remplace</b> les données actuelles de la clinique par celles du fichier. À utiliser avec précaution.</p></div>
+          <div class="card ov-table"><div class="chd"><h3>${ic('list', 18)}Journal des sauvegardes</h3></div>
+            <table class="tbl"><thead><tr><th>Date</th><th>Par</th><th class="r">Contenu</th><th class="r">Taille</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        const fi = $('#view [data-hb-restore]')
+        if (fi) fi.onchange = async () => { const f = fi.files[0]; if (!f) return
+          if (!await ui.confirm(`Restaurer « ${f.name} » ? Les données actuelles de la clinique seront remplacées par celles du fichier. Cette action est irréversible.`, { title: 'Restaurer une sauvegarde', ok: 'Restaurer', cancel: 'Annuler' })) { fi.value = ''; return }
+          try { const sql = await f.text(); const r = await api('/backups-hosted/restore', { sql }); toast(`Restauration réussie (${r.tables} tables)`); render() }
+          catch (e) { toast(e.message || 'Restauration impossible', true) } finally { fi.value = '' } }
         return
       }
       const d = await api('/backups'), bk = d.backups, last = bk[0], s = d.settings, used = bk.reduce((t, b) => t + b.db_size + b.files_size, 0)
@@ -168,6 +178,9 @@ export default function install({ $, esc, api, toast, render, me }) {
     if (a === 'wr-flow') { await api(`/appointments/${id}/flow`, { step: b.dataset.step }); toast({ arrived: 'Arrivée enregistrée', seated: 'Patient appelé en consultation', finished: 'Soin terminé' }[b.dataset.step]); render(); return true }
     if (a === 'wr-refresh') { render(); return true }
     if (a === 'intel-run') { const r = await blocking('Analyse des rendez-vous, des files, des absences, du stock et des ressources…', () => api('/intel/run', {})); toast(`Analyse terminée en ${r.ms} ms · ${r.recommendations} recommandation(s)`); render(); return true }
+    if (a === 'hb-now') { const r = await blocking('Création de la sauvegarde…', () => api('/backups-hosted', {}))
+      const url = URL.createObjectURL(new Blob([r.sql], { type: 'application/sql;charset=utf-8' })); const el = document.createElement('a'); el.href = url; el.download = r.filename; document.body.appendChild(el); el.click(); el.remove(); URL.revokeObjectURL(url)
+      toast(`Sauvegarde téléchargée (${r.total} enregistrements)`); render(); return true }
     if (a === 'bk-now') { const T = [['complete', 'Complète', 'database', 'Toute la base + tous les documents et radiographies. Point de départ de toute la stratégie.', 'Quelques secondes'], ['differentielle', 'Différentielle', 'layers', 'Seules les lignes modifiées depuis la dernière complète, et les documents nouveaux.', 'Très rapide'], ['journal', 'Journal des transactions', 'list', 'Toutes les modifications horodatées depuis le dernier journal : permet la restauration à la minute près.', 'Instantané'], ['partielle', 'Partielle', 'database', 'Toute la base, sans les documents ni radiographies : plus légère (avant une mise à jour, par exemple).', 'Rapide']]
       const v = await modal({ title: 'Nouvelle sauvegarde', icon: 'download', wide: true, ok: 'Lancer la sauvegarde', html: `<div class="bkty">${T.map((t, i) => `<label class="bkt"><input type="radio" name="type" value="${t[0]}" ${i ? '' : 'checked'}><span class="bkti">${ic(t[2], 20)}</span><span><b>${t[1]}</b><small>${t[3]}</small><em>${t[4]}</em></span></label>`).join('')}</div><p class="muted fnote">Chaque sauvegarde est relue et vérifiée avant d'être déclarée réussie, puis copiée sur le miroir s'il est configuré.</p>`,
         submit: f => blocking({ complete: 'Sauvegarde complète puis vérification (rechargement et recomptage)…', partielle: 'Sauvegarde partielle (base seule) puis vérification…', differentielle: 'Sauvegarde différentielle (lignes modifiées)…', journal: 'Sauvegarde du journal des transactions…' }[f.type], () => api('/backups', { type: f.type })) })
